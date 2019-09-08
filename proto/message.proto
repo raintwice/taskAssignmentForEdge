@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package message;
+
+service Connection {
+    rpc JoinGroup(JoinRequest) returns (JoinReply) {}
+    rpc ExitGroup(ExitRequest) returns (ExitReply) {}
+    rpc HeartBeat(HeartBeatRequest) returns (HeartBeatReply) {}
+}
+
+
+message JoinRequest {
+    int32 ipAddr = 1;
+}
+
+message JoinReply {
+    bool reply = 1;
+}
+
+message ExitRequest {
+    int32 ipAddr = 1;
+}
+
+message ExitReply {
+    bool reply = 1;
+}
+
+message HeartBeatRequest {
+    int64 time = 1;
+}
+
+message HeartBeatReply {
+    int64 time  = 1;
+}
+
