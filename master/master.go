@@ -6,9 +6,9 @@ import (
 
 //    "golang.org/x/net/context"
 //	"google.golang.org/grpc"
-	"taskAssignment/master/mastergrpc"
-  "taskAssignment/master/taskmgt"
-//    pb "taskAssignment/proto"
+	"taskAssignmentForEdge/master/mastergrpc"
+  "taskAssignmentForEdge/master/taskmgt"
+//    pb "taskAssignmentForEdge/proto"
     "sync"
 )
 

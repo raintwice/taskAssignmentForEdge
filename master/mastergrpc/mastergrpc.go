@@ -7,8 +7,8 @@ import (
 
     "golang.org/x/net/context"
     "google.golang.org/grpc"
-    pb "taskAssignment/proto"
-    "taskAssignment/master/nodemgt"
+    pb "taskAssignmentForEdge/proto"
+    "taskAssignmentForEdge/master/nodemgt"
 )
 
 const (
