@@ -8,10 +8,8 @@ service Connection {
     rpc HeartBeat(HeartBeatRequest) returns (HeartBeatReply) {}
 }
 
-
 message JoinRequest {
     string ipAddr = 1;
-    int32 port = 2;
 }
 
 message JoinReply {
@@ -34,3 +32,15 @@ message HeartBeatReply {
     int64 time  = 1;
 }
 
+service NodeConnection {
+    rpc SendFile(FileContent) returns (FileReply) {}
+}
+
+message FileContent {
+    string filename = 1;
+}
+
+message FileReply {
+    int32 status = 1;
+}
+ 
