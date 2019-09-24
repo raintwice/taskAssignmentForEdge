@@ -10,7 +10,8 @@ service Connection {
 
 
 message JoinRequest {
-    int32 ipAddr = 1;
+    string ipAddr = 1;
+    int32 port = 2;
 }
 
 message JoinReply {
@@ -18,7 +19,7 @@ message JoinReply {
 }
 
 message ExitRequest {
-    int32 ipAddr = 1;
+    string ipAddr = 1;
 }
 
 message ExitReply {

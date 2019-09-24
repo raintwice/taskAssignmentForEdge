@@ -6,7 +6,7 @@ import (
 
     "golang.org/x/net/context"
     "google.golang.org/grpc"
-    pb "taskAssignmentForEdge/proto"
+    pb "taskAssignment/proto"
 )
 
 const (
@@ -22,7 +22,7 @@ func Join() {
     defer conn.Close()
     c := pb.NewConnectionClient(conn)
 
-    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: 01})
+    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: "localhost", Port: 50052})
     if err != nil {
         log.Fatal("could not register: %v", err)
     }

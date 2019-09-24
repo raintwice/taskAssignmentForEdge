@@ -7,7 +7,7 @@ import (
 
 //    "golang.org/x/net/context"
 //	"google.golang.org/grpc"
-	"taskAssignmentForEdge/node/nodegrpc"
+	"taskAssignment/node/nodegrpc"
 //    pb "taskAssignment/proto"
 )
 

@@ -7,8 +7,8 @@ import (
 
     "golang.org/x/net/context"
     "google.golang.org/grpc"
-    pb "taskAssignmentForEdge/proto"
-    "taskAssignmentForEdge/master/nodemgt"
+    pb "taskAssignment/proto"
+    "taskAssignment/master/nodemgt"
 )
 
 const (
@@ -18,14 +18,14 @@ const (
 type server struct {}
 
 func (s *server) JoinGroup(ctx context.Context, in *pb.JoinRequest) (*pb.JoinReply, error) {
-    nodemgt.CreateNode(in.IpAddr);
-    log.Printf("node %d has joined in the group", in.IpAddr)
+    nodemgt.CreateNode(in.IpAddr, in.Port);
+    log.Printf("node %s has joined in the group", in.IpAddr)
     return &pb.JoinReply{Reply: true}, nil
 }
 
 func (s *server) ExitGroup(ctx context.Context, in *pb.ExitRequest) (*pb.ExitReply, error) {
     nodemgt.DeleteNode(in.IpAddr);
-    log.Printf("node %d has left from the group", in.IpAddr)
+    log.Printf("node %s has left from the group", in.IpAddr)
     return &pb.ExitReply{Reply: true}, nil
 }
 
