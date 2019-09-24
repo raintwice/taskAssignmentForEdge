@@ -6,7 +6,7 @@ import (
 
     "golang.org/x/net/context"
     "google.golang.org/grpc"
-    pb "taskAssignment/proto"
+    pb "taskAssignmentForEdge/proto"
 )
 
 const (
