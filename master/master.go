@@ -6,17 +6,19 @@ import (
 
 //    "golang.org/x/net/context"
 //	"google.golang.org/grpc"
-	"taskAssignmentForEdge/master/mastergrpc"
-  "taskAssignmentForEdge/master/taskmgt"
+	"taskAssignmentForEdge/master/common"
+  //"taskAssignmentForEdge/master/taskmgt"
 //    pb "taskAssignmentForEdge/proto"
     "sync"
 )
 
 
 func main() {
+    ms := common.NewMaster()
+    ms.Init()
     var wg sync.WaitGroup
     wg.Add(1)
-    go mastergrpc.BootupGrpcServer()
-    taskmgt.ReadTaskList("tasklist.json")
+    go ms.BootupGrpcServer()
+    //taskmgt.ReadTaskList("tasklist.json")
     wg.Wait()
 }

@@ -1,60 +1,74 @@
 package taskmgt
 
-
 import (
 	"container/list"
-	"fmt"
-	"os"
-	"log"
-	"encoding/json"
 )
 
-type taskEntity struct {
+/*
+* Task
+*/
+
+type TaskEntity struct {
 	TaskId int32 `json:"TaskId"`
 	TaskName string `json:"TaskName"`
 	TaskLocation string `json:"TaskLocation"`
 	//其他属性
 }
 
-var taskList list.List
-var taskTable = make(map[int32] (*list.Element) )
-
-//创建任务并加入队列
-func CreateTask(TaskId int32) *taskEntity {
-	task := new(taskEntity)
+//创建任务
+func CreateTask(TaskId int32) *TaskEntity {
+	task := new(TaskEntity)
 	task.TaskId = TaskId
-	e := taskList.PushBack(task)
-	taskTable[TaskId] = e
-	log.Printf("entity of task(Id:%d) is created", TaskId);
-	return e.Value.(*taskEntity)
+	return task
 }
 
-//从队列中删除任务
-func DeleteTask(TaskId int32) {
-	if e, ok := taskTable[TaskId]; ok {
-		delete(taskTable, TaskId)
-		//n := e.Value.(*taskEntity)
-		//n = nil
-		taskList.Remove(e)
-		log.Printf("entity of task(IP:%d) is deleted", TaskId);
+
+/*
+* TaskQueue
+*/
+
+type TaskQueue struct {
+	TaskList list.List
+	TaskTable map[int32](*list.Element) 
+	TaskNum int 
+}
+
+func NewTaskQueue()  *TaskQueue {
+	return &TaskQueue{
+		TaskList:  list.List{},
+		TaskTable: make(map[int32](*list.Element)),
+		TaskNum:   0,
 	}
 }
 
-//根据TaskId 查找任务
-func FindTask(TaskId int32) *taskEntity {
-	if e, ok := taskTable[TaskId]; ok {
-		return e.Value.(*taskEntity)
+func (tq *TaskQueue) AddTask(task *TaskEntity) {
+	e := tq.TaskList.PushBack(task)
+	tq.TaskTable[task.TaskId] = e
+	tq.TaskNum++
+}
+
+func (tq *TaskQueue) RemoveTask(TaskId int32) {
+	if e, ok := tq.TaskTable[TaskId]; ok {
+		delete(tq.TaskTable, TaskId)
+		tq.TaskList.Remove(e)
+		tq.TaskNum--
+	}
+}
+
+func (tq *TaskQueue) FindTask(TaskId int32) *TaskEntity {
+	if e, ok := tq.TaskTable[TaskId]; ok {
+		return e.Value.(*TaskEntity)
 	}
 	return nil
 }
 
-//查看当前队列有多少任务
-func GettaskNum() int {
-	return taskList.Len()
+func (tq *TaskQueue) GettaskNum() int {
+	return tq.TaskNum
 }
 
+
 //从json文件读入任务列表
-func ReadTaskList(listpath string) {
+/*func ReadTaskList(listpath string) {
 	filePtr, err := os.Open(listpath)
   if err != nil {
     fmt.Println("Open file failed [Err:%s]", err.Error())
@@ -63,7 +77,7 @@ func ReadTaskList(listpath string) {
   defer filePtr.Close()
   log.Printf("opened %s", filePtr)
 
-  var task []taskEntity
+  var task []TaskEntity
   // 创建json解码器
   decoder := json.NewDecoder(filePtr)
   err = decoder.Decode(&task)
@@ -74,4 +88,4 @@ func ReadTaskList(listpath string) {
     fmt.Println(task)
   }
   fmt.Println("---taskloading end---")
-}
+}*/

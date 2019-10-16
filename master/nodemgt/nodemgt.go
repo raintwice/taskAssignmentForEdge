@@ -3,47 +3,57 @@ package nodemgt
 import (
 	"container/list"
 	//"fmt"
-	"log"
+	//"log"
+	"taskAssignmentForEdge/master/taskmgt"
 )
 
-type nodeEntity struct {
-	ipAddr string
-	port int32
+type NodeEntity struct {
+	IpAddr string
+	Port int32
 	//其他属性
 
 	//已分配任务列表 taskId list
+	TqAssign *taskmgt.TaskQueue
 }
 
-var nodeList list.List
-var nodeTable = make(map[string] (*list.Element) )
 
-func CreateNode(ipAddr string, port int32) *nodeEntity {
-	node := new(nodeEntity)
-	node.ipAddr = ipAddr
-	node.port = port
-	e := nodeList.PushBack(node)
-	nodeTable[ipAddr] = e
-	log.Printf("entity of node(IP:%s, prot:%d) is created", ipAddr, port);
-	return e.Value.(*nodeEntity)
+type NodeQueue struct {
+	NodeList list.List
+	NodeTable map[string](*list.Element)
+	NodeNum int
 }
 
-func DeleteNode(ipAddr string) {
-	if e, ok := nodeTable[ipAddr]; ok {
-		delete(nodeTable, ipAddr)
-		//n := e.Value.(*nodeEntity)
-		//n = nil
-		nodeList.Remove(e)
-		log.Printf("entity of node(IP:%s) is deleted", ipAddr);
+/*
+节点入队和出队两函数在调度器schedule中提供，因为涉及任务的重新分配等过程
+*/
+
+/*创建节点*/
+func CreateNode(ipAddr string, port int32) *NodeEntity {
+	node := new(NodeEntity)
+	node.IpAddr = ipAddr
+	node.Port = port
+	node.TqAssign = taskmgt.NewTaskQueue()
+	return node
+}
+
+/*创建节点队列*/
+func NewNodeQueue()  *NodeQueue {
+	return &NodeQueue{
+		NodeList:  list.List{},
+		NodeTable: make(map[string](*list.Element)),
+		NodeNum:   0,
 	}
 }
 
-func FindNode(ipAddr string) *nodeEntity {
-	if e, ok := nodeTable[ipAddr]; ok {
-		return e.Value.(*nodeEntity)
+/*查找节点*/
+func (nq *NodeQueue) FindNode(ipAddr string) *NodeEntity {
+	if e, ok := nq.NodeTable[ipAddr]; ok {
+		return e.Value.(*NodeEntity)
 	}
 	return nil
 }
 
-func GetNodeNum() int {
-	return nodeList.Len()
+/*查看节点队列中节点数量*/
+func (nq *NodeQueue) GetQueueNodeNum() int {
+	return nq.NodeList.Len()
 }
