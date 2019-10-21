@@ -8,10 +8,9 @@ service Connection {
     rpc HeartBeat(HeartBeatRequest) returns (HeartBeatReply) {}
 }
 
-
 message JoinRequest {
-    string ipAddr = 1;
-    int32 port = 2;
+    string ipAddr = 1; //tell master the ip of this node
+    int32 port = 2;    //tell master the port of the node
 }
 
 message JoinReply {
@@ -31,6 +30,6 @@ message HeartBeatRequest {
 }
 
 message HeartBeatReply {
-    int64 time  = 1;
+    bool status = 1;
 }
 
