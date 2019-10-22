@@ -1,8 +1,8 @@
 PROTO_PATH = ../proto
 
-all: node
+all:build
 
-node:$(PROTO_PATH)/message.pb.go
+build:$(PROTO_PATH)/message.pb.go
 	go build node.go
 
 $(PROTO_PATH)/%.pb.go:$(PROTO_PATH)/%.proto

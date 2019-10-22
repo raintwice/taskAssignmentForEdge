@@ -2,6 +2,8 @@ package nodemgt
 
 import (
 	"container/list"
+	"time"
+
 	//"fmt"
 	//"log"
 	"taskAssignmentForEdge/master/taskmgt"
@@ -11,6 +13,7 @@ type NodeEntity struct {
 	IpAddr string
 	Port int32
 	//其他属性
+	LastHeartbeat time.Time
 
 	//已分配任务列表 taskId list
 	TqAssign *taskmgt.TaskQueue
@@ -33,6 +36,7 @@ func CreateNode(ipAddr string, port int32) *NodeEntity {
 	node.IpAddr = ipAddr
 	node.Port = port
 	node.TqAssign = taskmgt.NewTaskQueue()
+	node.LastHeartbeat = time.Now()
 	return node
 }
 

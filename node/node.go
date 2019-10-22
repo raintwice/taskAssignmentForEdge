@@ -1,14 +1,8 @@
 package main
 
 import (
-//    "log"
-    //"os"
     "sync"
-
-//    "golang.org/x/net/context"
-//	"google.golang.org/grpc"
-	"taskAssignmentForEdge/node/common"
-//    pb "taskAssignmentForEdge/proto"
+	"taskAssignmentForEdge/node/connect"
 )
 
 const (
@@ -17,10 +11,12 @@ const (
 )
 
 func main(){
-	node := common.NewNode(Maddress, Mport)
+	node := connect.NewNode(Maddress, Mport)
 	node.Init()
 	var wg sync.WaitGroup
     wg.Add(1)
-    go  node.Join()
+    go node.Join()
+	wg.Add(1)
+	go node.StartHeartbeatSender()
     wg.Wait()
 }

@@ -1,24 +1,19 @@
 package main
 
 import (
- //   "log"
-//   "net"
-
-//    "golang.org/x/net/context"
-//	"google.golang.org/grpc"
-	"taskAssignmentForEdge/master/common"
-  //"taskAssignmentForEdge/master/taskmgt"
-//    pb "taskAssignmentForEdge/proto"
     "sync"
+	"taskAssignmentForEdge/master/connect"
 )
 
 
 func main() {
-    ms := common.NewMaster()
+    ms := connect.NewMaster()
     ms.Init()
     var wg sync.WaitGroup
     wg.Add(1)
-    go ms.BootupGrpcServer()
+    go ms.StartGrpcServer()
+    wg.Add(1)
+    go ms.StartHeartbeatChecker()
     //taskmgt.ReadTaskList("tasklist.json")
     wg.Wait()
 }

@@ -188,80 +188,80 @@ func (m *ExitReply) GetReply() bool {
 	return false
 }
 
-type HeartBeatRequest struct {
-	Time                 int64    `protobuf:"varint,1,opt,name=time,proto3" json:"time,omitempty"`
+type HeartbeatRequest struct {
+	IpAddr               string   `protobuf:"bytes,1,opt,name=ipAddr,proto3" json:"ipAddr,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HeartBeatRequest) Reset()         { *m = HeartBeatRequest{} }
-func (m *HeartBeatRequest) String() string { return proto.CompactTextString(m) }
-func (*HeartBeatRequest) ProtoMessage()    {}
-func (*HeartBeatRequest) Descriptor() ([]byte, []int) {
+func (m *HeartbeatRequest) Reset()         { *m = HeartbeatRequest{} }
+func (m *HeartbeatRequest) String() string { return proto.CompactTextString(m) }
+func (*HeartbeatRequest) ProtoMessage()    {}
+func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{4}
 }
 
-func (m *HeartBeatRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_HeartBeatRequest.Unmarshal(m, b)
+func (m *HeartbeatRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_HeartbeatRequest.Unmarshal(m, b)
 }
-func (m *HeartBeatRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_HeartBeatRequest.Marshal(b, m, deterministic)
+func (m *HeartbeatRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_HeartbeatRequest.Marshal(b, m, deterministic)
 }
-func (m *HeartBeatRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HeartBeatRequest.Merge(m, src)
+func (m *HeartbeatRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeartbeatRequest.Merge(m, src)
 }
-func (m *HeartBeatRequest) XXX_Size() int {
-	return xxx_messageInfo_HeartBeatRequest.Size(m)
+func (m *HeartbeatRequest) XXX_Size() int {
+	return xxx_messageInfo_HeartbeatRequest.Size(m)
 }
-func (m *HeartBeatRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_HeartBeatRequest.DiscardUnknown(m)
+func (m *HeartbeatRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeartbeatRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_HeartBeatRequest proto.InternalMessageInfo
+var xxx_messageInfo_HeartbeatRequest proto.InternalMessageInfo
 
-func (m *HeartBeatRequest) GetTime() int64 {
+func (m *HeartbeatRequest) GetIpAddr() string {
 	if m != nil {
-		return m.Time
+		return m.IpAddr
 	}
-	return 0
+	return ""
 }
 
-type HeartBeatReply struct {
-	Status               bool     `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
+type HeartbeatReply struct {
+	Ack                  bool     `protobuf:"varint,1,opt,name=ack,proto3" json:"ack,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *HeartBeatReply) Reset()         { *m = HeartBeatReply{} }
-func (m *HeartBeatReply) String() string { return proto.CompactTextString(m) }
-func (*HeartBeatReply) ProtoMessage()    {}
-func (*HeartBeatReply) Descriptor() ([]byte, []int) {
+func (m *HeartbeatReply) Reset()         { *m = HeartbeatReply{} }
+func (m *HeartbeatReply) String() string { return proto.CompactTextString(m) }
+func (*HeartbeatReply) ProtoMessage()    {}
+func (*HeartbeatReply) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{5}
 }
 
-func (m *HeartBeatReply) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_HeartBeatReply.Unmarshal(m, b)
+func (m *HeartbeatReply) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_HeartbeatReply.Unmarshal(m, b)
 }
-func (m *HeartBeatReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_HeartBeatReply.Marshal(b, m, deterministic)
+func (m *HeartbeatReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_HeartbeatReply.Marshal(b, m, deterministic)
 }
-func (m *HeartBeatReply) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HeartBeatReply.Merge(m, src)
+func (m *HeartbeatReply) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HeartbeatReply.Merge(m, src)
 }
-func (m *HeartBeatReply) XXX_Size() int {
-	return xxx_messageInfo_HeartBeatReply.Size(m)
+func (m *HeartbeatReply) XXX_Size() int {
+	return xxx_messageInfo_HeartbeatReply.Size(m)
 }
-func (m *HeartBeatReply) XXX_DiscardUnknown() {
-	xxx_messageInfo_HeartBeatReply.DiscardUnknown(m)
+func (m *HeartbeatReply) XXX_DiscardUnknown() {
+	xxx_messageInfo_HeartbeatReply.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_HeartBeatReply proto.InternalMessageInfo
+var xxx_messageInfo_HeartbeatReply proto.InternalMessageInfo
 
-func (m *HeartBeatReply) GetStatus() bool {
+func (m *HeartbeatReply) GetAck() bool {
 	if m != nil {
-		return m.Status
+		return m.Ack
 	}
 	return false
 }
@@ -271,30 +271,30 @@ func init() {
 	proto.RegisterType((*JoinReply)(nil), "message.JoinReply")
 	proto.RegisterType((*ExitRequest)(nil), "message.ExitRequest")
 	proto.RegisterType((*ExitReply)(nil), "message.ExitReply")
-	proto.RegisterType((*HeartBeatRequest)(nil), "message.HeartBeatRequest")
-	proto.RegisterType((*HeartBeatReply)(nil), "message.HeartBeatReply")
+	proto.RegisterType((*HeartbeatRequest)(nil), "message.HeartbeatRequest")
+	proto.RegisterType((*HeartbeatReply)(nil), "message.HeartbeatReply")
 }
 
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 255 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0x41, 0x4b, 0xc3, 0x40,
-	0x10, 0x85, 0x1b, 0x6d, 0xa3, 0x99, 0xa2, 0xc8, 0x50, 0x6a, 0xed, 0xa9, 0x2e, 0x28, 0x39, 0xf5,
-	0xa0, 0x07, 0xf1, 0x58, 0x45, 0x14, 0x8f, 0xfb, 0x0f, 0xa2, 0x1d, 0x64, 0xc1, 0x64, 0xd7, 0xdd,
-	0x09, 0xe8, 0xcf, 0xf3, 0x9f, 0xc9, 0x6e, 0xe2, 0xb2, 0x04, 0xa5, 0xb7, 0x79, 0xc9, 0x7b, 0x1f,
-	0xf3, 0x66, 0xe1, 0xa8, 0x26, 0xe7, 0xaa, 0x37, 0x5a, 0x1b, 0xab, 0x59, 0xe3, 0x41, 0x2f, 0xc5,
-	0x2d, 0x4c, 0x9f, 0xb5, 0x6a, 0x24, 0x7d, 0xb4, 0xe4, 0x18, 0xe7, 0x90, 0x2b, 0xb3, 0xd9, 0x6e,
-	0xed, 0x22, 0x5b, 0x65, 0x65, 0x21, 0x7b, 0x85, 0x08, 0x63, 0xa3, 0x2d, 0x2f, 0xf6, 0x56, 0x59,
-	0x39, 0x91, 0x61, 0x16, 0xe7, 0x50, 0x74, 0x51, 0xf3, 0xfe, 0x85, 0x33, 0x98, 0x58, 0x3f, 0x84,
-	0xdc, 0xa1, 0xec, 0x84, 0xb8, 0x80, 0xe9, 0xc3, 0xa7, 0xe2, 0x1d, 0x74, 0x4f, 0xea, 0x6c, 0xff,
-	0x93, 0x2e, 0xe1, 0xe4, 0x89, 0x2a, 0xcb, 0x77, 0x54, 0x45, 0x1c, 0xc2, 0x98, 0x55, 0x4d, 0xc1,
-	0xb8, 0x2f, 0xc3, 0x2c, 0x4a, 0x38, 0x4e, 0x7c, 0x9e, 0x37, 0x87, 0xdc, 0x71, 0xc5, 0xad, 0xeb,
-	0x81, 0xbd, 0xba, 0xfa, 0xce, 0x00, 0xee, 0x75, 0xd3, 0xd0, 0x2b, 0x2b, 0xdd, 0xe0, 0x4d, 0xd7,
-	0xe6, 0xd1, 0xea, 0xd6, 0xe0, 0x6c, 0xfd, 0x7b, 0xae, 0xe4, 0x38, 0x4b, 0x1c, 0x7c, 0xf5, 0x7b,
-	0x8d, 0x7c, 0xd0, 0x2f, 0x3f, 0x0c, 0x26, 0xbd, 0x93, 0x60, 0xac, 0x29, 0x46, 0xb8, 0x81, 0x22,
-	0xae, 0x8a, 0x67, 0xd1, 0x32, 0xac, 0xb9, 0x3c, 0xfd, 0xeb, 0x57, 0x40, 0xbc, 0xe4, 0xe1, 0x35,
-	0xaf, 0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0x09, 0x66, 0x47, 0x9d, 0xde, 0x01, 0x00, 0x00,
+	// 241 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcd, 0x4d, 0x2d, 0x2e,
+	0x4e, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x87, 0x72, 0x95, 0x2c, 0xb9,
+	0xb8, 0xbd, 0xf2, 0x33, 0xf3, 0x82, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0xc4, 0xb8, 0xd8,
+	0x32, 0x0b, 0x1c, 0x53, 0x52, 0x8a, 0x24, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xa0, 0x3c, 0x21,
+	0x21, 0x2e, 0x96, 0x82, 0xfc, 0xa2, 0x12, 0x09, 0x26, 0x05, 0x46, 0x0d, 0xd6, 0x20, 0x30, 0x5b,
+	0x49, 0x91, 0x8b, 0x13, 0xa2, 0xb5, 0x20, 0xa7, 0x52, 0x48, 0x84, 0x8b, 0xb5, 0x08, 0xc4, 0x00,
+	0xeb, 0xe3, 0x08, 0x82, 0x70, 0x94, 0x54, 0xb9, 0xb8, 0x5d, 0x2b, 0x32, 0x4b, 0x08, 0x98, 0x0e,
+	0x32, 0x09, 0xa2, 0x0c, 0xb7, 0x49, 0x5a, 0x5c, 0x02, 0x1e, 0xa9, 0x89, 0x45, 0x25, 0x49, 0xa9,
+	0x89, 0x04, 0x8d, 0x53, 0xe2, 0xe2, 0x43, 0x52, 0x0b, 0x32, 0x53, 0x80, 0x8b, 0x39, 0x31, 0x39,
+	0x1b, 0x6a, 0x22, 0x88, 0x69, 0x74, 0x90, 0x91, 0x8b, 0xcb, 0x39, 0x3f, 0x2f, 0x2f, 0x35, 0xb9,
+	0x24, 0x33, 0x3f, 0x4f, 0xc8, 0x1c, 0xe2, 0x17, 0xf7, 0xa2, 0xfc, 0xd2, 0x02, 0x21, 0x11, 0x3d,
+	0x58, 0x60, 0x21, 0x05, 0x8d, 0x94, 0x10, 0x9a, 0x28, 0xc8, 0x55, 0x0c, 0x20, 0x8d, 0x20, 0xa7,
+	0xa3, 0x6b, 0x44, 0xf2, 0x35, 0x92, 0x46, 0xb8, 0x27, 0x95, 0x18, 0x84, 0x1c, 0xb9, 0x38, 0xe1,
+	0x8e, 0x14, 0x92, 0x84, 0x2b, 0x41, 0xf7, 0xa4, 0x94, 0x38, 0x36, 0x29, 0xb0, 0x11, 0x49, 0x6c,
+	0xe0, 0xb8, 0x34, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x34, 0x20, 0x9b, 0x9a, 0xdc, 0x01, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -311,7 +311,7 @@ const _ = grpc.SupportPackageIsVersion4
 type ConnectionClient interface {
 	JoinGroup(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinReply, error)
 	ExitGroup(ctx context.Context, in *ExitRequest, opts ...grpc.CallOption) (*ExitReply, error)
-	HeartBeat(ctx context.Context, in *HeartBeatRequest, opts ...grpc.CallOption) (*HeartBeatReply, error)
+	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatReply, error)
 }
 
 type connectionClient struct {
@@ -340,9 +340,9 @@ func (c *connectionClient) ExitGroup(ctx context.Context, in *ExitRequest, opts 
 	return out, nil
 }
 
-func (c *connectionClient) HeartBeat(ctx context.Context, in *HeartBeatRequest, opts ...grpc.CallOption) (*HeartBeatReply, error) {
-	out := new(HeartBeatReply)
-	err := c.cc.Invoke(ctx, "/message.Connection/HeartBeat", in, out, opts...)
+func (c *connectionClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatReply, error) {
+	out := new(HeartbeatReply)
+	err := c.cc.Invoke(ctx, "/message.Connection/Heartbeat", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ func (c *connectionClient) HeartBeat(ctx context.Context, in *HeartBeatRequest, 
 type ConnectionServer interface {
 	JoinGroup(context.Context, *JoinRequest) (*JoinReply, error)
 	ExitGroup(context.Context, *ExitRequest) (*ExitReply, error)
-	HeartBeat(context.Context, *HeartBeatRequest) (*HeartBeatReply, error)
+	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatReply, error)
 }
 
 // UnimplementedConnectionServer can be embedded to have forward compatible implementations.
@@ -366,8 +366,8 @@ func (*UnimplementedConnectionServer) JoinGroup(ctx context.Context, req *JoinRe
 func (*UnimplementedConnectionServer) ExitGroup(ctx context.Context, req *ExitRequest) (*ExitReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExitGroup not implemented")
 }
-func (*UnimplementedConnectionServer) HeartBeat(ctx context.Context, req *HeartBeatRequest) (*HeartBeatReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HeartBeat not implemented")
+func (*UnimplementedConnectionServer) Heartbeat(ctx context.Context, req *HeartbeatRequest) (*HeartbeatReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
 }
 
 func RegisterConnectionServer(s *grpc.Server, srv ConnectionServer) {
@@ -410,20 +410,20 @@ func _Connection_ExitGroup_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Connection_HeartBeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HeartBeatRequest)
+func _Connection_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ConnectionServer).HeartBeat(ctx, in)
+		return srv.(ConnectionServer).Heartbeat(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/message.Connection/HeartBeat",
+		FullMethod: "/message.Connection/Heartbeat",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConnectionServer).HeartBeat(ctx, req.(*HeartBeatRequest))
+		return srv.(ConnectionServer).Heartbeat(ctx, req.(*HeartbeatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -441,8 +441,8 @@ var _Connection_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Connection_ExitGroup_Handler,
 		},
 		{
-			MethodName: "HeartBeat",
-			Handler:    _Connection_HeartBeat_Handler,
+			MethodName: "Heartbeat",
+			Handler:    _Connection_Heartbeat_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

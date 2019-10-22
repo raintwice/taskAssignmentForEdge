@@ -5,7 +5,7 @@ package message;
 service Connection {
     rpc JoinGroup(JoinRequest) returns (JoinReply) {}
     rpc ExitGroup(ExitRequest) returns (ExitReply) {}
-    rpc HeartBeat(HeartBeatRequest) returns (HeartBeatReply) {}
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
 }
 
 message JoinRequest {
@@ -25,11 +25,11 @@ message ExitReply {
     bool reply = 1;
 }
 
-message HeartBeatRequest {
-    int64 time = 1;
+message HeartbeatRequest {
+    string ipAddr = 1;
 }
 
-message HeartBeatReply {
-    bool status = 1;
+message HeartbeatReply {
+    bool ack = 1;
 }
 
