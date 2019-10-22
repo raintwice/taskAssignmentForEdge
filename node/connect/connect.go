@@ -11,31 +11,35 @@ import (
 )
 
 
-
 type Node struct {
     Maddr string
-    Mport int32
+    Mport int
     Saddr string
-    Sport int32
+    Sport int
 
     conn *grpc.ClientConn
 //
 }
 
-func NewNode(addr string, port int32) (* Node) {
+func NewNode(addr string, port int, sport int) (* Node) {
     return &Node {
         Maddr:addr,
         Mport:port,
+        Sport:sport,
     }
 }
 
 func (no *Node) Init() {
     //get the ip and port of this node
-    no.Saddr = "127.0.0.1"
-    no.Sport = 50052
+    //no.Saddr = "127.0.0.1"
+	ip, iperr := common.ExternalIP()
+	if iperr != nil  {
+		log.Fatalf("cannot not get the local IP address: %v", iperr)
+	}
+	no.Saddr = ip.String()
 
     var err error
-    no.conn, err = grpc.Dial(no.Maddr + ":" + strconv.Itoa(int(no.Mport)), grpc.WithInsecure())
+    no.conn, err = grpc.Dial(no.Maddr + ":" + strconv.Itoa(no.Mport), grpc.WithInsecure())
     if err != nil {
         log.Fatal("cannot not connect with master(%s:%d): %v", no.Maddr, no.Mport, err)
     }
@@ -44,9 +48,9 @@ func (no *Node) Init() {
 func (no *Node) Join() {
     c := pb.NewConnectionClient(no.conn)
 
-    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port: no.Sport})
+    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port: int32(no.Sport)})
     if err != nil {
-        log.Fatal("could not call JoinGroup when joining: %v", err)
+        log.Fatalf("could not call JoinGroup when joining: %v", err)
     }
     if(r.Reply) {
         log.Printf("Successed to join")

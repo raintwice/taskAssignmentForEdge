@@ -2,6 +2,7 @@ package nodemgt
 
 import (
 	"container/list"
+	"google.golang.org/grpc"
 	"time"
 
 	//"fmt"
@@ -11,14 +12,14 @@ import (
 
 type NodeEntity struct {
 	IpAddr string
-	Port int32
+	Port int
 	//其他属性
 	LastHeartbeat time.Time
 
 	//已分配任务列表 taskId list
 	TqAssign *taskmgt.TaskQueue
+	Conn *grpc.ClientConn
 }
-
 
 type NodeQueue struct {
 	NodeList list.List
@@ -31,7 +32,7 @@ type NodeQueue struct {
 */
 
 /*创建节点*/
-func CreateNode(ipAddr string, port int32) *NodeEntity {
+func CreateNode(ipAddr string, port int) *NodeEntity {
 	node := new(NodeEntity)
 	node.IpAddr = ipAddr
 	node.Port = port

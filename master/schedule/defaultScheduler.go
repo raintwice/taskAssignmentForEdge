@@ -2,11 +2,10 @@ package schedule
 
 import (
 	"log"
-	"time"
+	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
 	"taskAssignmentForEdge/master/taskmgt"
-	"taskAssignmentForEdge/common"
-
+	"time"
 )
 
 //Round Robin

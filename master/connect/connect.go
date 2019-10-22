@@ -1,16 +1,17 @@
 package connect
 
 import (
-	"log"
-	"net"
-	"time"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "taskAssignmentForEdge/proto"
-	"taskAssignmentForEdge/master/nodemgt"
-	"taskAssignmentForEdge/master/taskmgt"
-	"taskAssignmentForEdge/master/schedule"
+	"log"
+	"net"
+	"strconv"
 	"taskAssignmentForEdge/common"
+	"taskAssignmentForEdge/master/nodemgt"
+	"taskAssignmentForEdge/master/schedule"
+	"taskAssignmentForEdge/master/taskmgt"
+	pb "taskAssignmentForEdge/proto"
+	"time"
 )
 
 
@@ -32,18 +33,32 @@ func NewMaster() *Master {
 	}
 }
 
+func (ms *Master) InitNodeConn(node *nodemgt.NodeEntity ) error {
+	var err error
+	node.Conn, err = grpc.Dial(node.IpAddr + ":" + strconv.Itoa(node.Port), grpc.WithInsecure())
+	if err != nil {
+		log.Printf("Cannot not connect with Node(%s:%d): %v", node.IpAddr, node.Port, err)
+		return err
+	}
+	return nil
+}
+
 func (ms *Master) JoinGroup(ctx context.Context, in *pb.JoinRequest) (*pb.JoinReply, error) {
 	node := ms.Nq.FindNode(in.IpAddr)
 
 	if node == nil {
-		node = nodemgt.CreateNode(in.IpAddr, in.Port);
-		ms.sche.EnqueueNode(ms.Nq, node)
+		node = nodemgt.CreateNode(in.IpAddr, int(in.Port));
+		err := ms.InitNodeConn(node)
+		if err != nil {
+			log.Printf("Node(IP:%s:%d) failed to join in because master cannot build up connection with this node ", node.IpAddr, node.Port)
+			return &pb.JoinReply{Reply: false}, nil
+		} else {
+			ms.sche.EnqueueNode(ms.Nq, node)
+		}
 	} else {
-		log.Printf("Node(IP:%s) has joined in the group repeatedly", in.IpAddr)
+		log.Printf("Node(IP:%s:%d) has joined in the group repeatedly", in.IpAddr, in.Port)
 	}
-
 	node.LastHeartbeat = time.Now()
-	//log.Printf("Node %s joined at %v", node.IpAddr, time.Now())
 	return &pb.JoinReply{Reply: true}, nil
 }
 
@@ -79,7 +94,7 @@ func (ms *Master) Init() {
 func (ms *Master) StartGrpcServer() {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatal("failed to start grpc server: %v", err)
+		log.Fatal("Failed to start grpc server: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterConnectionServer(s, ms)
