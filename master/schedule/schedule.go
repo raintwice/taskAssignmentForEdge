@@ -2,7 +2,7 @@ package schedule
 
 import (
 	"taskAssignmentForEdge/master/nodemgt"
-	"taskAssignmentForEdge/master/taskmgt"
+	"taskAssignmentForEdge/taskmgt"
 )
 
 type Scheduler interface {

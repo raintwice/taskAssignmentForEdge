@@ -7,7 +7,7 @@ import (
 
 	//"fmt"
 	//"log"
-	"taskAssignmentForEdge/master/taskmgt"
+	"taskAssignmentForEdge/taskmgt"
 )
 
 type NodeEntity struct {

@@ -9,7 +9,7 @@ import (
 	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
 	"taskAssignmentForEdge/master/schedule"
-	"taskAssignmentForEdge/master/taskmgt"
+	"taskAssignmentForEdge/taskmgt"
 	pb "taskAssignmentForEdge/proto"
 	"time"
 )

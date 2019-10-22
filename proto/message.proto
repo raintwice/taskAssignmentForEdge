@@ -33,3 +33,16 @@ message HeartbeatReply {
     bool ack = 1;
 }
 
+/*
+service Connection {
+    rpc AssignTask(SendTaskRequest) returns (SendTaskReply) {}
+}
+
+message SendTaskRequest {
+    int32 taskId
+    string taskName
+}
+
+message SendTaskReply {
+
+}*/

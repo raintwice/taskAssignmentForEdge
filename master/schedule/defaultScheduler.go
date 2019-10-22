@@ -4,7 +4,7 @@ import (
 	"log"
 	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
-	"taskAssignmentForEdge/master/taskmgt"
+	"taskAssignmentForEdge/taskmgt"
 	"time"
 )
 
