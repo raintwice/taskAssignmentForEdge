@@ -15,5 +15,7 @@ func main() {
     wg.Add(1)
     go ms.StartHeartbeatChecker()
     //taskmgt.ReadTaskList("tasklist.json")
+    wg.Add(1)
+    go ms.StartDispatcher()
     wg.Wait()
 }

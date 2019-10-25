@@ -9,18 +9,17 @@ import (
 	//"strconv"
 	"sync"
 	"taskAssignmentForEdge/node/connect"
+	"taskAssignmentForEdge/common"
 )
 
 const (
     Maddress  = "localhost" //master ip
-    Mport  = 50051		    //master port
-	Sport = 50052
 )
 
 //Usage:L ./node master-ip node-port
 func main(){
 	var madd string = Maddress
-	var sport int = Sport
+	var sport int = common.Sport
 
 	var _ error
 	switch len(os.Args) {
@@ -35,12 +34,14 @@ func main(){
 	default:
 	}
 
-	node := connect.NewNode(madd, Mport, sport)
-	node.Init()
+	node := connect.NewNode(madd, common.Mport, sport)
+	node.InitConnection()
 	var wg sync.WaitGroup
     wg.Add(1)
     go node.Join()
 	wg.Add(1)
 	go node.StartHeartbeatSender()
+	wg.Add(1)
+	go node.StartRecvServer()
     wg.Wait()
 }

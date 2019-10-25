@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package message;
 
-service Connection {
+service Node2MasterConn {
     rpc JoinGroup(JoinRequest) returns (JoinReply) {}
     rpc ExitGroup(ExitRequest) returns (ExitReply) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
@@ -33,16 +33,28 @@ message HeartbeatReply {
     bool ack = 1;
 }
 
-/*
-service Connection {
-    rpc AssignTask(SendTaskRequest) returns (SendTaskReply) {}
+service Master2NodeConn {
+    rpc AssignTask(stream TaskChunk) returns (SendStatus) {}
 }
 
-message SendTaskRequest {
-    int32 taskId
-    string taskName
+message TaskInfo
+{
+    string TaskName = 1;
+    int32  TaskId   = 2;
 }
 
-message SendTaskReply {
+message TaskChunk {
+    TaskInfo Info = 1;
+    bytes Content = 2;
+}
 
-}*/
+enum SendStatusCode {
+    Unknown = 0;
+    Ok = 1;
+    Failed = 2;
+}
+
+message SendStatus {
+    string Message = 1;
+    SendStatusCode Code = 2;
+}

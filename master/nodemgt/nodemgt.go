@@ -3,6 +3,7 @@ package nodemgt
 import (
 	"container/list"
 	"google.golang.org/grpc"
+	"sync"
 	"time"
 
 	//"fmt"
@@ -16,15 +17,17 @@ type NodeEntity struct {
 	//其他属性
 	LastHeartbeat time.Time
 
-	//已分配任务列表 taskId list
-	TqAssign *taskmgt.TaskQueue
-	Conn *grpc.ClientConn
+	TqAssign *taskmgt.TaskQueue  //已经分配到节点的任务队列
+	TqPrepare *taskmgt.TaskQueue //待分配任务队列
+	Conn *grpc.ClientConn        //master与node的通信连接
 }
 
 type NodeQueue struct {
 	NodeList list.List
 	NodeTable map[string](*list.Element)
 	NodeNum int
+
+	Rwlock sync.RWMutex
 }
 
 /*
@@ -37,6 +40,7 @@ func CreateNode(ipAddr string, port int) *NodeEntity {
 	node.IpAddr = ipAddr
 	node.Port = port
 	node.TqAssign = taskmgt.NewTaskQueue()
+	node.TqPrepare = taskmgt.NewTaskQueue()
 	node.LastHeartbeat = time.Now()
 	return node
 }
@@ -60,5 +64,5 @@ func (nq *NodeQueue) FindNode(ipAddr string) *NodeEntity {
 
 /*查看节点队列中节点数量*/
 func (nq *NodeQueue) GetQueueNodeNum() int {
-	return nq.NodeList.Len()
+	return nq.NodeNum
 }

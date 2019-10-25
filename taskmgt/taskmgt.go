@@ -2,6 +2,7 @@ package taskmgt
 
 import (
 	"container/list"
+	"sync"
 )
 
 /*
@@ -13,6 +14,9 @@ type TaskEntity struct {
 	TaskName string `json:"TaskName"`
 	TaskLocation string `json:"TaskLocation"`
 	//其他属性
+
+	//节点
+	NodeIP  string
 }
 
 //创建任务
@@ -30,7 +34,9 @@ func CreateTask(TaskId int32) *TaskEntity {
 type TaskQueue struct {
 	TaskList list.List
 	TaskTable map[int32](*list.Element) 
-	TaskNum int 
+	TaskNum int
+
+	Rwlock sync.RWMutex
 }
 
 func NewTaskQueue()  *TaskQueue {
@@ -42,16 +48,20 @@ func NewTaskQueue()  *TaskQueue {
 }
 
 func (tq *TaskQueue) AddTask(task *TaskEntity) {
+	tq.Rwlock.Lock()
 	e := tq.TaskList.PushBack(task)
 	tq.TaskTable[task.TaskId] = e
 	tq.TaskNum++
+	tq.Rwlock.Unlock()
 }
 
 func (tq *TaskQueue) RemoveTask(TaskId int32) {
 	if e, ok := tq.TaskTable[TaskId]; ok {
+		tq.Rwlock.Lock()
 		delete(tq.TaskTable, TaskId)
 		tq.TaskList.Remove(e)
 		tq.TaskNum--
+		tq.Rwlock.Unlock()
 	}
 }
 
