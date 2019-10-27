@@ -5,26 +5,6 @@ import (
 	"sync"
 )
 
-/*
-* Task
-*/
-
-type TaskEntity struct {
-	TaskId int32 `json:"TaskId"`
-	TaskName string `json:"TaskName"`
-	TaskLocation string `json:"TaskLocation"`
-	//其他属性
-
-	//节点
-	NodeIP  string
-}
-
-//创建任务
-func CreateTask(TaskId int32) *TaskEntity {
-	task := new(TaskEntity)
-	task.TaskId = TaskId
-	return task
-}
 
 
 /*

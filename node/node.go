@@ -1,47 +1,57 @@
 package main
 
 import (
-	"log"
+	"flag"
+	"fmt"
+	//"log"
 	"os"
-	"strconv"
+	//"strconv"
 
 	//"os"
 	//"strconv"
 	"sync"
 	"taskAssignmentForEdge/node/connect"
-	"taskAssignmentForEdge/common"
+	//"taskAssignmentForEdge/common"
 )
 
-const (
-    Maddress  = "localhost" //master ip
+var (
+	h bool
+	masterip string
+	masterport int
+	nodeport int
 )
 
-//Usage:L ./node master-ip node-port
+func init() {
+	flag.BoolVar(&h, "h", false, "print help information")
+	flag.StringVar(&masterip, "mip", "127.0.0.1", "set the listener ip of master")
+	flag.IntVar(&masterport, "mport", 50051, "set the listener port of master")
+	flag.IntVar(&nodeport, "nport", 50052, "set the listener port of node")
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, `Usage: node [-h] [-mip masterip] [-mport masterport] [-nport nodeport]
+Options:
+`)
+	flag.PrintDefaults()
+}
+
 func main(){
-	var madd string = Maddress
-	var sport int = common.Sport
-
-	var _ error
-	switch len(os.Args) {
-	case 2:
-		madd = os.Args[1]
-		log.Printf("args 1 : %s", madd)
-	case 3:
-		madd = os.Args[1]
-		log.Printf("args 1 : %s", madd)
-		sport, _ = strconv.Atoi(os.Args[2])
-		log.Printf("args 2 : %s, %d", os.Args[2], sport)
-	default:
+	flag.Parse()
+	if h {
+		usage()
+		//flag.Usage()
+		return
 	}
 
-	node := connect.NewNode(madd, common.Mport, sport)
+	node := connect.NewNode(masterip, masterport, nodeport)
 	node.InitConnection()
+	node.Join()
 	var wg sync.WaitGroup
     wg.Add(1)
-    go node.Join()
+	go node.StartHeartbeatSender(&wg)
 	wg.Add(1)
-	go node.StartHeartbeatSender()
+	go node.StartRecvServer(&wg)
 	wg.Add(1)
-	go node.StartRecvServer()
+	go node.StartPool(3, &wg)
     wg.Wait()
 }

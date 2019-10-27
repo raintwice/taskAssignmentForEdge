@@ -11,11 +11,11 @@ func main() {
     ms.Init()
     var wg sync.WaitGroup
     wg.Add(1)
-    go ms.StartGrpcServer()
+    go ms.StartGrpcServer(&wg)
     wg.Add(1)
-    go ms.StartHeartbeatChecker()
+    go ms.StartHeartbeatChecker(&wg)
     //taskmgt.ReadTaskList("tasklist.json")
     wg.Add(1)
-    go ms.StartDispatcher()
+    go ms.StartDispatcher(&wg)
     wg.Wait()
 }

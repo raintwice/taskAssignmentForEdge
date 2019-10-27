@@ -6,6 +6,7 @@ service Node2MasterConn {
     rpc JoinGroup(JoinRequest) returns (JoinReply) {}
     rpc ExitGroup(ExitRequest) returns (ExitReply) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
+    rpc SendTaskResult(TaskResultReq) returns (TaskResultResp) {}
 }
 
 message JoinRequest {
@@ -31,6 +32,17 @@ message HeartbeatRequest {
 
 message HeartbeatReply {
     bool ack = 1;
+}
+
+message TaskResultReq {
+    string TaskNme   = 1;
+    int32 TaskId     = 2;
+    int32 StatusCode = 3;
+    string err       = 4;
+}
+
+message TaskResultResp {
+    bool ack =  1;
 }
 
 service Master2NodeConn {

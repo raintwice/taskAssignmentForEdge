@@ -1,43 +1,23 @@
 package connect
 
 import (
-	"io"
-	"log"
-	"net"
-	"os"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"log"
 	"strconv"
+	"sync"
 	"taskAssignmentForEdge/common"
 	pb "taskAssignmentForEdge/proto"
 	"taskAssignmentForEdge/taskmgt"
+
+	//"taskAssignmentForEdge/taskmgt"
 	//"net"
 	"time"
 )
 
-
-type Node struct {
-    Maddr string
-    Mport int
-    Saddr string
-    Sport int
-
-    conn *grpc.ClientConn  //与master的连接
-	Tq *taskmgt.TaskQueue  //等待队列
-}
-
-func NewNode(addr string, port int, sport int) (* Node) {
-    return &Node {
-        Maddr:addr,
-        Mport:port,
-        Sport:sport,
-    }
-}
-
 //
 func (no *Node) InitConnection() {
     //get the ip and port of this node
-    //no.Saddr = "127.0.0.1"
 	ip, iperr := common.ExternalIP()
 	if iperr != nil  {
 		log.Fatalf("Cannot not get the local IP address: %v", iperr)
@@ -81,10 +61,11 @@ func (no *Node) SendHeartbeat()  {
 	}
 }
 
-func (no *Node) StartHeartbeatSender() {
+func (no *Node) StartHeartbeatSender(wg *sync.WaitGroup) {
 	for range time.Tick(time.Millisecond*common.Timeout) {
 		no.SendHeartbeat()
 	}
+	wg.Done()
 }
 
 func (no *Node) Exit() {
@@ -101,61 +82,31 @@ func (no *Node) Exit() {
 	}
 }
 
-func (no *Node) StartRecvServer() {
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(no.Sport))
-	if err != nil {
-		log.Fatal("Failed to start receiver server: %v", err)
+func (no *Node) SendTaskResult(task *taskmgt.TaskEntity) {
+	c := pb.NewNode2MasterConnClient(no.conn)
+
+	res := pb.TaskResultReq{
+		TaskNme:task.TaskName,
+		TaskId: task.TaskId,
+		StatusCode:int32(task.Status),
+		Err:task.Err.Error(),
 	}
-	s := grpc.NewServer()
-	pb.RegisterMaster2NodeConnServer(s, no)
-	s.Serve(lis)
-}
 
-func (no *Node) AssignTask(stream pb.Master2NodeConn_AssignTaskServer) error {
-	newTask := new(taskmgt.TaskEntity)
-	newTask.TaskName = ""
-
-	//TBD location
-
-	var f *os.File = nil
-
-	for {
-		chunk, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				goto END
-			}
-			log.Print(err)
-			return err
+	r, err := c.SendTaskResult(context.Background(), &res)
+	if err != nil {
+		log.Printf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
+	} else {
+		if(r.Ack) {
+			log.Printf("Successed to send task result")
 		} else {
-			if chunk.Info != nil && f == nil {
-				//log.Printf("File name is %s", chunk.TaskName)
-				newTask.TaskName = chunk.Info.TaskName
-				newTask.TaskId = chunk.Info.TaskId
-				log.Printf("Received task name: %s, id: %d\n", chunk.Info.TaskName, chunk.Info.TaskId)
-				var cerr error
-				f, cerr = os.OpenFile(newTask.TaskName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-				if cerr != nil {
-					log.Printf("Cannot create file err: %v", cerr)
-					stream.SendAndClose(&pb.SendStatus{
-						Message:              "Fail to assign task",
-						Code:                 pb.SendStatusCode_Failed,
-					})
-					return cerr
-				}
-				defer f.Close()
-			}
-			f.Write(chunk.Content)
+			log.Printf("Failed to send task result")
 		}
 	}
+}
 
-END:
-	err := stream.SendAndClose(&pb.SendStatus{
-		Message:              "Assign File succeed",
-		Code:                 pb.SendStatusCode_Ok,
-	})
-
-	no.Tq.AddTask(newTask)
-
-	return err
+func SendTask(no *Node, task *taskmgt.TaskEntity) {
+	if no == nil || task == nil {
+		return
+	}
+	no.SendTaskResult(task)
 }

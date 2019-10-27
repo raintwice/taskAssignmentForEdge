@@ -36,7 +36,7 @@ func ( dp * DefaultDispatcher) EnqueueNode(nq *nodemgt.NodeQueue, node *nodemgt.
 		nq.NodeTable[node.IpAddr] = e
 		nq.NodeNum++
 		nq.Rwlock.Unlock()
-		log.Printf("Node(IP:%s) has joined in the node queue", node.IpAddr);
+		log.Printf("Node(%s:%d) has joined in the node queue", node.IpAddr, node.Port);
 	}
 }
 
@@ -59,17 +59,21 @@ func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 		return
 	}
 
-	nq.Rwlock.RLock()
+	nq.Rwlock.Lock()
 	for e := nq.NodeList.Front(); e != nil; {
 		node := e.Value.(*nodemgt.NodeEntity)
 		e = e.Next()
 		//log.Printf("Node %s last heartbeat at %v, now is %v", node.IpAddr, node.LastHeartbeat, time.Now())
 		if time.Now().Sub(node.LastHeartbeat) > (time.Millisecond*common.Timeout*2) { //超时删除
 			log.Printf("Node(IP:%s) has lost connection", node.IpAddr)
-			dp.DequeueNode(nq, node)
+
+			nq.NodeList.Remove(nq.NodeTable[node.IpAddr])
+			delete(nq.NodeTable, node.IpAddr)
+			nq.NodeNum--
+			log.Printf("Node(IP:%s) has exited from the node queue", node.IpAddr);
 		}
 	}
-	nq.Rwlock.RUnlock()
+	nq.Rwlock.Unlock()
 }
 
 //Round Robin
