@@ -76,10 +76,10 @@ func (ms *Master) Heartbeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb.H
 	node := ms.Nq.FindNode(in.IpAddr)
 	if node == nil {
 		log.Printf("Unexpected heartbeat from nonexistent node(IP:%s)", in.IpAddr)
-		return &pb.HeartbeatReply{Ack:false}, nil
+		return &pb.HeartbeatReply{Reply:false}, nil
 	} else {
 		node.LastHeartbeat = time.Now()
-		return &pb.HeartbeatReply{Ack:true}, nil
+		return &pb.HeartbeatReply{Reply:true}, nil
 	}
 }
 
@@ -93,8 +93,11 @@ func (ms *Master) StartHeartbeatChecker(wg *sync.WaitGroup) {
 	}
 }
 
-//接受任务结果
+//接受node的任务结果
 func (ms *Master) SendTaskResult(ctx context.Context, in *pb.TaskResultReq) (*pb.TaskResultResp, error) {
+	//TBD 结果处理和重调度
+
+	//默认成功
 
 	return nil, nil
 }

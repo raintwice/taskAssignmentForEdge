@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package message;
 
+//node -> master
 service Node2MasterConn {
     rpc JoinGroup(JoinRequest) returns (JoinReply) {}
     rpc ExitGroup(ExitRequest) returns (ExitReply) {}
@@ -9,6 +10,7 @@ service Node2MasterConn {
     rpc SendTaskResult(TaskResultReq) returns (TaskResultResp) {}
 }
 
+//join group
 message JoinRequest {
     string ipAddr = 1; //tell master the ip of this node
     int32 port = 2;    //tell master the port of the node
@@ -18,6 +20,7 @@ message JoinReply {
     bool reply = 1;
 }
 
+//exit group
 message ExitRequest {
     string ipAddr = 1;
 }
@@ -26,33 +29,43 @@ message ExitReply {
     bool reply = 1;
 }
 
+//node send heartbeat
 message HeartbeatRequest {
     string ipAddr = 1;
 }
 
 message HeartbeatReply {
-    bool ack = 1;
+    bool reply = 1;
 }
 
-message TaskResultReq {
-    string TaskNme   = 1;
+//node send task result
+message TaskResultInfo
+{
+    string TaskName   = 1;
     int32 TaskId     = 2;
     int32 StatusCode = 3;
     string err       = 4;
 }
 
-message TaskResultResp {
-    bool ack =  1;
+message TaskResultReq {
+    TaskResultInfo info = 1;
 }
 
+message TaskResultResp {
+    bool reply =  1;
+}
+
+//master -> node
 service Master2NodeConn {
     rpc AssignTask(stream TaskChunk) returns (SendStatus) {}
 }
 
+//master assgin task to node
 message TaskInfo
 {
     string TaskName = 1;
-    int32  TaskId   = 2;
+    string TaskLocation = 2; //needed if client to master
+    int32  TaskId   = 3;
 }
 
 message TaskChunk {
@@ -69,4 +82,29 @@ enum SendStatusCode {
 message SendStatus {
     string Message = 1;
     SendStatusCode Code = 2;
+}
+
+//client to master
+service Client2MasterConn {
+    rpc SubmitTask(TaskSubmitReq) returns (TaskSubmitResp) {}
+}
+
+//client submit task
+message TaskSubmitReq {
+    repeated TaskInfo taskGp = 1;
+}
+
+message TaskSubmitResp {
+    bool reply = 1;
+}
+
+service Master2ClientConn {
+    rpc ReturnSubmittedTask(TaskSubmitResReq) returns (TaskSubmitResResp) {}
+}
+message TaskSubmitResReq {
+    repeated TaskResultInfo infoGp = 1;
+}
+
+message TaskSubmitResResp {
+    bool reply = 1;
 }

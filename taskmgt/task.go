@@ -11,8 +11,8 @@ import (
  */
 
 const (
-	TaskStatusCode_Created = iota
-	TaskStatusCode_WaitForAssign
+	TaskStatusCode_Created  = iota   //in client
+	TaskStatusCode_WaitForAssign     //submitted in master
 	TaskStatusCode_Assigned
 	TaskStatusCode_WaitForExec
 	TaskStatusCode_Running
@@ -43,7 +43,6 @@ type TaskEntity struct {
 func CreateTask(TaskId int32) *TaskEntity {
 	task := new(TaskEntity)
 	task.TaskId = TaskId
-	task.Status = TaskStatusCode_Created
 	return task
 }
 

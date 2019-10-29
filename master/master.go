@@ -17,5 +17,7 @@ func main() {
     //taskmgt.ReadTaskList("tasklist.json")
     wg.Add(1)
     go ms.StartDispatcher(&wg)
+    wg.Add(1)
+    go ms.StartServerForClient(&wg)
     wg.Wait()
 }

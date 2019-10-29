@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"google.golang.org/grpc"
 	"taskAssignmentForEdge/master/dispatch"
 	"taskAssignmentForEdge/master/nodemgt"
 	"taskAssignmentForEdge/taskmgt"
@@ -10,6 +11,9 @@ type Master struct {
 	Tq *taskmgt.TaskQueue //等待队列
 	Nq *nodemgt.NodeQueue //节点队列
 	dispatcher dispatch.Dispatcher
+
+	//
+	ClientConn *grpc.ClientConn
 }
 
 func NewMaster() *Master {

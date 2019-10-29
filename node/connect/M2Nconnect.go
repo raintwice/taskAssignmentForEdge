@@ -71,7 +71,6 @@ END:
 
 	//no.Tq.AddTask(newTask)
 	//提交该任务至任务队列
-	//newTask.F =
 	newTask.SetTaskCallback(SendTask, no, newTask)
 	go no.pool.Submit(newTask)
 

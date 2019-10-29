@@ -53,7 +53,7 @@ func (no *Node) SendHeartbeat()  {
 		log.Printf("could not send heartbeat to master(%s:%d): %v", no.Maddr, no.Mport, err)
 		no.Join()
 	} else {
-		if(r.Ack) {
+		if(r.Reply) {
 			log.Printf("Successed to send heartbeat")
 		} else {
 			log.Printf("Failed to send heartbeat")
@@ -85,18 +85,21 @@ func (no *Node) Exit() {
 func (no *Node) SendTaskResult(task *taskmgt.TaskEntity) {
 	c := pb.NewNode2MasterConnClient(no.conn)
 
-	res := pb.TaskResultReq{
-		TaskNme:task.TaskName,
+	info := &pb.TaskResultInfo{
+		TaskName:task.TaskName,
 		TaskId: task.TaskId,
 		StatusCode:int32(task.Status),
 		Err:task.Err.Error(),
+	}
+	res := pb.TaskResultReq{
+		Info: info,
 	}
 
 	r, err := c.SendTaskResult(context.Background(), &res)
 	if err != nil {
 		log.Printf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
 	} else {
-		if(r.Ack) {
+		if(r.Reply) {
 			log.Printf("Successed to send task result")
 		} else {
 			log.Printf("Failed to send task result")
