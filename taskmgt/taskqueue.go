@@ -13,8 +13,7 @@ import (
 
 type TaskQueue struct {
 	TaskList list.List
-	TaskTable map[int32](*list.Element) 
-	TaskNum int
+	TaskTable map[int32](*list.Element)
 
 	Rwlock sync.RWMutex
 }
@@ -23,7 +22,6 @@ func NewTaskQueue()  *TaskQueue {
 	return &TaskQueue{
 		TaskList:  list.List{},
 		TaskTable: make(map[int32](*list.Element)),
-		TaskNum:   0,
 	}
 }
 
@@ -31,7 +29,6 @@ func (tq *TaskQueue) AddTask(task *TaskEntity) {
 	tq.Rwlock.Lock()
 	e := tq.TaskList.PushBack(task)
 	tq.TaskTable[task.TaskId] = e
-	tq.TaskNum++
 	tq.Rwlock.Unlock()
 }
 
@@ -40,7 +37,6 @@ func (tq *TaskQueue) RemoveTask(TaskId int32) {
 		tq.Rwlock.Lock()
 		delete(tq.TaskTable, TaskId)
 		tq.TaskList.Remove(e)
-		tq.TaskNum--
 		tq.Rwlock.Unlock()
 	}
 }
@@ -53,7 +49,7 @@ func (tq *TaskQueue) FindTask(TaskId int32) *TaskEntity {
 }
 
 func (tq *TaskQueue) GettaskNum() int {
-	return tq.TaskNum
+	return tq.TaskList.Len()
 }
 
 

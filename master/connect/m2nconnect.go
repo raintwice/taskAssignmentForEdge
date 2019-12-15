@@ -108,7 +108,7 @@ func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEnti
 }
 
 func (ms *Master) AssignTaskForNode(node *nodemgt.NodeEntity) {
-	if node == nil || node.TqPrepare.TaskNum == 0 {
+	if node == nil || node.TqPrepare.GettaskNum() == 0 {
 		return
 	}
 	node.TqPrepare.Rwlock.RLock()

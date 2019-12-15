@@ -1,3 +1,4 @@
 master/master
 node/node
 proto/*pb.go
+.idea

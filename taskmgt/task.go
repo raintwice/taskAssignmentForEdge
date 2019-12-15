@@ -25,6 +25,9 @@ type TaskEntity struct {
 	TaskName string `json:"TaskName"`          //任务文件名
 	TaskLocation string `json:"TaskLocation"` //任务路径
 
+
+
+
 	//执行状态
 	Status int
 	Err error

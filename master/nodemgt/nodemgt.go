@@ -25,7 +25,7 @@ type NodeEntity struct {
 type NodeQueue struct {
 	NodeList list.List
 	NodeTable map[string](*list.Element)
-	NodeNum int
+	//NodeNum int
 
 	Rwlock sync.RWMutex
 }
@@ -50,7 +50,6 @@ func NewNodeQueue()  *NodeQueue {
 	return &NodeQueue{
 		NodeList:  list.List{},
 		NodeTable: make(map[string](*list.Element)),
-		NodeNum:   0,
 	}
 }
 
@@ -64,5 +63,5 @@ func (nq *NodeQueue) FindNode(ipAddr string) *NodeEntity {
 
 /*查看节点队列中节点数量*/
 func (nq *NodeQueue) GetQueueNodeNum() int {
-	return nq.NodeNum
+	return nq.NodeList.Len()
 }

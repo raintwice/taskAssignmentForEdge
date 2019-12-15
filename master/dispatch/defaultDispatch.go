@@ -34,7 +34,6 @@ func ( dp * DefaultDispatcher) EnqueueNode(nq *nodemgt.NodeQueue, node *nodemgt.
 		nq.Rwlock.Lock()
 		e := nq.NodeList.PushBack(node)
 		nq.NodeTable[node.IpAddr] = e
-		nq.NodeNum++
 		nq.Rwlock.Unlock()
 		log.Printf("Node(%s:%d) has joined in the node queue", node.IpAddr, node.Port);
 	}
@@ -48,14 +47,13 @@ func ( dp * DefaultDispatcher) DequeueNode(nq *nodemgt.NodeQueue, node *nodemgt.
 	nq.Rwlock.Lock()
 	nq.NodeList.Remove(nq.NodeTable[node.IpAddr])
 	delete(nq.NodeTable, node.IpAddr)
-	nq.NodeNum--
 	nq.Rwlock.Unlock()
 	log.Printf("Node(IP:%s) has exited from the node queue", node.IpAddr);
 }
 
 func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 	//log.Println("Running CheckNode")
-	if nq == nil || nq.NodeNum == 0 {
+	if nq == nil || nq.GetQueueNodeNum() == 0 {
 		return
 	}
 
@@ -69,7 +67,6 @@ func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 
 			nq.NodeList.Remove(nq.NodeTable[node.IpAddr])
 			delete(nq.NodeTable, node.IpAddr)
-			nq.NodeNum--
 			log.Printf("Node(IP:%s) has exited from the node queue", node.IpAddr);
 		}
 	}
@@ -80,7 +77,7 @@ func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 //para: 待分配任务队列， 节点队列
 func ( dp * DefaultDispatcher) AssignTask(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) {
 
-	if tq == nil || nq == nil || tq.TaskNum == 0 || nq.NodeNum == 0 {
+	if tq == nil || nq == nil || tq.GettaskNum() == 0 || nq.GetQueueNodeNum() == 0 {
 		return
 	}
 	//TBD
