@@ -16,24 +16,46 @@ import (
 
 //分配
 
-func (ms *Master) ReturnTaskToClient(task *taskmgt.TaskEntity) {
+func (ms *Master) ReturnOneTaskToClient(task *taskmgt.TaskEntity) {
 	c := pb.NewMaster2ClientConnClient(ms.ClientConn)
 
-	info := pb.TaskResultInfo{
-		TaskName: task.TaskName,
-		StatusCode: int32(task.Status),
-		Err : task.Err.Error(),
-	}
-	//var infogp []*pb.TaskResultInfo
-	infogp := []*pb.TaskResultInfo{}
-	infogp = append(infogp, &info)
+	info := &pb.TaskInfo{}
+	taskmgt.TranslateTaskResE2P(task, info)
+	infogp := make([]*pb.TaskInfo, 0)
+	infogp = append(infogp, info)
 
 	res := &pb.TaskSubmitResReq{
 		InfoGp:infogp,
 	}
-	r, _ := c.ReturnSubmittedTask(context.Background(), res)
-	if r.Reply {
-		log.Printf("Return result of task %s ", task.TaskName)
+	r, err := c.ReturnSubmittedTasks(context.Background(), res)
+	if err != nil {
+		log.Printf("Cannot send back result of task %d to client", task.TaskId)
+	} else {
+		if r.Reply {
+			log.Printf("Sucess to return result of task %d to client", task.TaskId)
+		} else {
+			log.Printf("Fail to return result of task %d to client", task.TaskId)
+		}
 	}
 }
 
+func (ms *Master) ReturnTasksToClient(taskgp []*taskmgt.TaskEntity) {
+	c := pb.NewMaster2ClientConnClient(ms.ClientConn)
+	infogp := make([]*pb.TaskInfo, 0)
+	for _, task := range taskgp {
+		info := &pb.TaskInfo{}
+		taskmgt.TranslateTaskResE2P(task, info)
+		infogp = append(infogp, info)
+	}
+
+	res := &pb.TaskSubmitResReq{
+		InfoGp:infogp,
+	}
+	r, _ := c.ReturnSubmittedTasks(context.Background(), res)
+	if r.Reply {
+		log.Printf("Success:Return result of tasks: ")
+		for _, task := range taskgp {
+			log.Printf("%s  ", task.TaskName)
+		}
+	}
+}

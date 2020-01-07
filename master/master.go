@@ -2,7 +2,7 @@ package main
 
 import (
     "sync"
-	"taskAssignmentForEdge/master/connect"
+   	"taskAssignmentForEdge/master/connect"
 )
 
 

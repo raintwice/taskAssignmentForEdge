@@ -6,11 +6,12 @@ import (
 )
 
 type Dispatcher interface {
-	EnqueueTask(tq *taskmgt.TaskQueue, task *taskmgt.TaskEntity )
-	EnqueueNode(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity )
+	//EnqueueTask(tq *taskmgt.TaskQueue, task *taskmgt.TaskEntity )
+	//EnqueueNode(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity )
 
-	AssignTask(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue)
+	MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) (isNeedAssign bool)
+	UpdateDispatcherStat(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity)
 
-	DequeueNode(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity)
-	CheckNode(nq *nodemgt.NodeQueue)
+	//Node(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity)
+	//CheckNode(nq *nodemgt.NodeQueue)
 }

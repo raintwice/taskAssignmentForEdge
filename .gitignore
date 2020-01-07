@@ -1,4 +1,6 @@
 master/master
 node/node
+client/client
 proto/*pb.go
 .idea
+client/Evalutionfiles/*

@@ -1,9 +1,11 @@
 package connect
 
 import (
+	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
+	"math/rand"
 	"strconv"
 	"sync"
 	"taskAssignmentForEdge/common"
@@ -32,29 +34,73 @@ func (no *Node) InitConnection() {
 }
 
 func (no *Node) Join() {
+	if no.isOnline == true {
+		fmt.Printf("Notice: Node(%s:%d) is already online\n", no.Saddr, no.Sport)
+		return
+	}
     c := pb.NewNode2MasterConnClient(no.conn)
 
-    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port: int32(no.Sport)})
+    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port:int32(no.Sport), Bandwith:no.BandWidth})
     if err != nil {
-        log.Fatalf("Could not call JoinGroup when joining: %v", err)
+        log.Printf("Could not call JoinGroup when joining: %v", err)
+        return
     }
     if(r.Reply) {
-        log.Printf("Successed to join")
+        log.Printf("Node(%s:%d) Successed to join", no.Saddr, no.Sport)
+        no.isOnline = true
     } else {
-        log.Printf("Failed to join")
+        log.Printf("Node(%s:%d) Failed to join", no.Saddr, no.Sport)
     }
 }
 
-func (no *Node) SendHeartbeat()  {
+func (no *Node) Exit() {
+	if no.isOnline == false {
+		fmt.Printf("Notice: Node(%s:%d) is already offline\n", no.Saddr, no.Sport)
+		return
+	}
 	c := pb.NewNode2MasterConnClient(no.conn)
 
-	r, err := c.Heartbeat(context.Background(), &pb.HeartbeatRequest{IpAddr: no.Saddr})
+	r, err := c.ExitGroup(context.Background(), &pb.ExitRequest{IpAddr: no.Saddr, Port:int32(no.Sport)})
+	if err != nil {
+		log.Printf("Could not call ExitGroup when exiting: %v", err)
+		return
+	}
+	if(r.Reply) {
+		log.Printf("Successed to exit")
+		no.isOnline = false
+	} else {
+		log.Printf("Failed to exit")
+	}
+}
+
+func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
+	time.Sleep(time.Duration(no.StartJoinTime)*time.Second)
+	no.Join()
+	interval := time.Duration(float64(time.Duration(no.PscTimeAvg)*time.Minute)*(1-no.Avl)/no.Avl)
+	for {
+		pscTimeInSec := rand.NormFloat64()*float64(no.PscTimeSigma) + float64(no.PscTimeAvg*60)
+		pscTime := time.Duration(pscTimeInSec*float64(time.Second))
+		time.Sleep(pscTime)
+		no.Exit()
+		time.Sleep(interval)
+		no.Join()
+	}
+	wg.Done()
+}
+
+func (no *Node) SendHeartbeat()  {
+	if no.isOnline == false {
+		return
+	}
+	c := pb.NewNode2MasterConnClient(no.conn)
+
+	r, err := c.Heartbeat(context.Background(), &pb.HeartbeatRequest{IpAddr: no.Saddr, Port:int32(no.Sport)})
 	if err != nil {
 		log.Printf("could not send heartbeat to master(%s:%d): %v", no.Maddr, no.Mport, err)
 		no.Join()
 	} else {
 		if(r.Reply) {
-			log.Printf("Successed to send heartbeat")
+			//log.Printf("Successed to send heartbeat")
 		} else {
 			log.Printf("Failed to send heartbeat")
 		}
@@ -68,48 +114,49 @@ func (no *Node) StartHeartbeatSender(wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (no *Node) Exit() {
+func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 	c := pb.NewNode2MasterConnClient(no.conn)
 
-	r, err := c.ExitGroup(context.Background(), &pb.ExitRequest{IpAddr: no.Saddr})
-	if err != nil {
-		log.Printf("Could not call ExitGroup when exiting: %v", err)
+	infoGp := make([]*pb.TaskInfo, 0)
+	for _, task := range taskResGp {
+		info := &pb.TaskInfo{}
+		taskmgt.TranslateTaskResE2P(task, info)
+		infoGp = append(infoGp, info)
 	}
-	if(r.Reply) {
-		log.Printf("Successed to join")
-	} else {
-		log.Printf("Failed to join")
-	}
-}
 
-func (no *Node) SendTaskResult(task *taskmgt.TaskEntity) {
-	c := pb.NewNode2MasterConnClient(no.conn)
-
-	info := &pb.TaskResultInfo{
-		TaskName:task.TaskName,
-		TaskId: task.TaskId,
-		StatusCode:int32(task.Status),
-		Err:task.Err.Error(),
-	}
 	res := pb.TaskResultReq{
-		Info: info,
+		TaskResGp: infoGp,
 	}
 
-	r, err := c.SendTaskResult(context.Background(), &res)
+	r, err := c.SendTaskResults(context.Background(), &res)
 	if err != nil {
 		log.Printf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
 	} else {
 		if(r.Reply) {
-			log.Printf("Successed to send task result")
+			var idstr string = ""
+			for _, task := range taskResGp {
+				idstr = idstr + strconv.Itoa(int(task.TaskId))+ ";"
+			}
+			log.Printf("Successed to return tasks(%s) result in Node(%s:%d)", idstr, no.Saddr, no.Sport)
 		} else {
-			log.Printf("Failed to send task result")
+			log.Printf("Failed to retun task result in Node(%s:%d)", no.Saddr, no.Sport)
 		}
 	}
 }
 
-func SendTask(no *Node, task *taskmgt.TaskEntity) {
+func SendOneTask(no *Node, task *taskmgt.TaskEntity) {
 	if no == nil || task == nil {
 		return
 	}
-	no.SendTaskResult(task)
+	log.Printf("Succeed to excute task(Id:%d) in Node(%s:%d)", task.TaskId, no.Saddr, no.Sport)
+	taskgp := make([]*taskmgt.TaskEntity,0)
+	taskgp = append(taskgp, task)
+	no.SendTaskResults(taskgp)
+}
+
+func SendTasks(no *Node, taskgp []*taskmgt.TaskEntity) {
+	if no == nil || taskgp == nil || len(taskgp) == 0 {
+		return
+	}
+	no.SendTaskResults(taskgp)
 }

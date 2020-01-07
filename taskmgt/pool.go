@@ -1,9 +1,5 @@
 package taskmgt
 
-import (
-	"log"
-)
-
 type Pool struct {
 	EntryChannel chan *TaskEntity
 	worker_num int
@@ -21,8 +17,9 @@ func NewPool(cap int) *Pool {
 
 func (p *Pool) worker(workId int) {
 	for task := range p.JobsChannel {
-		task.Execute()
-		log.Printf("Task %s completed in worker ID %d", task.TaskName, workId)
+		//task.Execute()
+		task.RunSimulation()
+		//log.Printf("Task %d completed in worker ID %d", task.TaskId, workId)
 	}
 }
 

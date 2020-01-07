@@ -2,16 +2,16 @@ package dispatch
 
 import (
 	"container/list"
-	"log"
-	"taskAssignmentForEdge/common"
+	//"log"
+	//"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
 	"taskAssignmentForEdge/taskmgt"
-	"time"
+	//"time"
 )
 
 //Round Robin
 type DefaultDispatcher struct {
-	lastNode *list.Element
+	lastNode *nodemgt.NodeEntity
 }
 
 func NewDefaultDispatcher() (*DefaultDispatcher) {
@@ -20,25 +20,28 @@ func NewDefaultDispatcher() (*DefaultDispatcher) {
 	}
 }
 
+/*
 func ( dp * DefaultDispatcher) EnqueueTask(tq *taskmgt.TaskQueue, task *taskmgt.TaskEntity) {
 	//加入队尾
 	if tq != nil && task != nil {
 		tq.AddTask(task)
 		log.Printf("Task(Id:%d) has joined in the task queue", task.TaskId);
 	}
-}
+}*/
 
+/*
 func ( dp * DefaultDispatcher) EnqueueNode(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity) {
 	//加入队尾
 	if nq != nil && node != nil {
 		nq.Rwlock.Lock()
 		e := nq.NodeList.PushBack(node)
-		nq.NodeTable[node.IpAddr] = e
+		nq.NodeTable[node.NodeId] = e
 		nq.Rwlock.Unlock()
 		log.Printf("Node(%s:%d) has joined in the node queue", node.IpAddr, node.Port);
 	}
-}
+}*/
 
+/*
 func ( dp * DefaultDispatcher) DequeueNode(nq *nodemgt.NodeQueue, node *nodemgt.NodeEntity) {
 	if nq == nil ||  node == nil{
 		return
@@ -49,8 +52,9 @@ func ( dp * DefaultDispatcher) DequeueNode(nq *nodemgt.NodeQueue, node *nodemgt.
 	delete(nq.NodeTable, node.IpAddr)
 	nq.Rwlock.Unlock()
 	log.Printf("Node(IP:%s) has exited from the node queue", node.IpAddr);
-}
+}*/
 
+/*
 func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 	//log.Println("Running CheckNode")
 	if nq == nil || nq.GetQueueNodeNum() == 0 {
@@ -60,53 +64,57 @@ func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 	nq.Rwlock.Lock()
 	for e := nq.NodeList.Front(); e != nil; {
 		node := e.Value.(*nodemgt.NodeEntity)
-		e = e.Next()
+		next_e := e.Next()
 		//log.Printf("Node %s last heartbeat at %v, now is %v", node.IpAddr, node.LastHeartbeat, time.Now())
 		if time.Now().Sub(node.LastHeartbeat) > (time.Millisecond*common.Timeout*2) { //超时删除
-			log.Printf("Node(IP:%s) has lost connection", node.IpAddr)
+			log.Printf("Node(IP:%s:%d) has lost connection", node.NodeId.NodeIP, node.NodeId.NodePort)
 
-			nq.NodeList.Remove(nq.NodeTable[node.IpAddr])
+			nq.NodeList.Remove(e)
 			delete(nq.NodeTable, node.IpAddr)
 			log.Printf("Node(IP:%s) has exited from the node queue", node.IpAddr);
 		}
 	}
 	nq.Rwlock.Unlock()
-}
+}*/
 
 //Round Robin
 //para: 待分配任务队列， 节点队列
-func ( dp * DefaultDispatcher) AssignTask(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) {
+func ( dp * DefaultDispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) bool {
 
 	if tq == nil || nq == nil || tq.GettaskNum() == 0 || nq.GetQueueNodeNum() == 0 {
-		return
+		return false
 	}
-	//TBD
-	tq.Rwlock.RLock()
-	nq.Rwlock.RLock()
-	taske := tq.TaskList.Front()
-	nodee := dp.lastNode
-	if nodee == nil {
-		nodee = nq.NodeList.Front()
-	}
-	for {
-		if taske == nil { //待分配任务队列
-			dp.lastNode = nodee
-			break;
-		}
-		if nodee == nil { //循环
-			nodee = nq.NodeList.Front()
-		}
-		task := taske.Value.(*taskmgt.TaskEntity)
-		taske = taske.Next()
+	nq.Rwlock.Lock()
 
-		//将任务分配到节点的待分配队列中
-		tq.Rwlock.RUnlock()
-		tq.RemoveTask(task.TaskId)
-		tq.Rwlock.RLock()
-		node := nodee.Value.(*nodemgt.NodeEntity)
-		node.TqPrepare.AddTask(task)
-		nodee = nodee.Next()
+	//调度队列弹出所有任务
+	tasks := tq.DequeueAllTasks()
+	var e *list.Element = nil
+	if dp.lastNode != nil {
+		e = nq.NodeTable[dp.lastNode.NodeId]
 	}
-	tq.Rwlock.RUnlock()
-	nq.Rwlock.RUnlock()
+	if e == nil {
+		e = nq.NodeList.Front()
+	}
+	for _, task := range tasks {
+		node := e.Value.(*nodemgt.NodeEntity)
+		task.NodeId.IP = node.NodeId.IP
+		task.NodeId.Port = node.NodeId.Port
+		task.Status = taskmgt.TaskStatusCode_Assigned
+		node.TqPrepare.EnqueueTask(task)
+		e = e.Next()
+		if e == nil {
+			e = nq.NodeList.Front()
+		}
+	}
+	dp.lastNode = e.Value.(*nodemgt.NodeEntity)
+	nq.Rwlock.Unlock()
+	//log.Printf("Succeed to make dispatching decision, remain %d tasks in th global queue", tq.GettaskNum())
+	return true
+}
+
+const Decay_Weight = 0.4
+
+func ( dp * DefaultDispatcher) UpdateDispatcherStat(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) {
+	node.AverWaitTime = int32(float64(node.AverWaitTime)*Decay_Weight + float64(task.ExecTST-task.RecvTST)*(1-Decay_Weight))
+	node.FinishTaskCnt ++
 }

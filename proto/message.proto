@@ -7,13 +7,14 @@ service Node2MasterConn {
     rpc JoinGroup(JoinRequest) returns (JoinReply) {}
     rpc ExitGroup(ExitRequest) returns (ExitReply) {}
     rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {}
-    rpc SendTaskResult(TaskResultReq) returns (TaskResultResp) {}
+    rpc SendTaskResults(TaskResultReq) returns (TaskResultResp) {}
 }
 
 //join group
 message JoinRequest {
     string ipAddr = 1; //tell master the ip of this node
     int32 port = 2;    //tell master the port of the node
+    double bandwith = 3;
 }
 
 message JoinReply {
@@ -23,6 +24,7 @@ message JoinReply {
 //exit group
 message ExitRequest {
     string ipAddr = 1;
+    int32 port = 2;
 }
 
 message ExitReply {
@@ -32,23 +34,52 @@ message ExitReply {
 //node send heartbeat
 message HeartbeatRequest {
     string ipAddr = 1;
+    int32  port   = 2;
 }
 
 message HeartbeatReply {
     bool reply = 1;
 }
 
-//node send task result
-message TaskResultInfo
+message TaskInfo
 {
-    string TaskName   = 1;
-    int32 TaskId     = 2;
-    int32 StatusCode = 3;
-    string err       = 4;
+//attribute needed to input
+    string Username = 1;
+    double CPUReq   = 2;
+    double MemoryReq = 3;
+    double DiskReq   = 4;
+    int64  RuntimePreSet  = 5;  //for simualtion in edge nodes
+    string TaskName  = 6; //jobname
+    string LogicName = 7;
+    double DataSize  = 8;
+    int32  DeadlineSlack = 9;
+    string TaskLocation  = 10; //needed if client to master
+
+//attribute created in the master
+    int32  TaskId   = 11; //created by master
+    int64  SubmitTST = 12; //timestamp when accepted by master
+    int64  PredictExecTime = 13;
+    int64  PredictTransTime = 14;
+    int64  PredictWaitTime  = 15;
+    int64  PredictExtraTime = 16;
+    string AssignNodeIP = 17;
+    int32  AssignNodePort = 18;
+    int64  AssignTST =  19; //timestamp when begin to assign
+
+//attribute created in the node
+    int64  RecvTST   = 20;  //timestamp when receivied by node
+    int64  ExecTST   =  21; //timestamp when begin to execute
+    int64  FinishTST =  22; //timestamp when begin to execute
+    int32  RunCnt    =  23; //update when accepted by node
+
+//attribute changed in all steps
+    int32 StatusCode  = 24;
+    string Err        = 25;
 }
 
+//node send task result
 message TaskResultReq {
-    TaskResultInfo info = 1;
+    repeated TaskInfo taskResGp = 1;
 }
 
 message TaskResultResp {
@@ -58,16 +89,10 @@ message TaskResultResp {
 //master -> node
 service Master2NodeConn {
     rpc AssignTask(stream TaskChunk) returns (SendStatus) {}
+    rpc AssignSimTasks(SimTaskAssignReq) returns (SendStatus) {}
 }
 
-//master assgin task to node
-message TaskInfo
-{
-    string TaskName = 1;
-    string TaskLocation = 2; //needed if client to master
-    int32  TaskId   = 3;
-}
-
+//master assgin one task to node
 message TaskChunk {
     TaskInfo Info = 1;
     bytes Content = 2;
@@ -84,9 +109,13 @@ message SendStatus {
     SendStatusCode Code = 2;
 }
 
+message SimTaskAssignReq {
+    repeated TaskInfo taskGp = 1;
+}
+
 //client to master
 service Client2MasterConn {
-    rpc SubmitTask(TaskSubmitReq) returns (TaskSubmitResp) {}
+    rpc SubmitTasks(TaskSubmitReq) returns (TaskSubmitResp) {}
 }
 
 //client submit task
@@ -99,10 +128,11 @@ message TaskSubmitResp {
 }
 
 service Master2ClientConn {
-    rpc ReturnSubmittedTask(TaskSubmitResReq) returns (TaskSubmitResResp) {}
+    rpc ReturnSubmittedTasks(TaskSubmitResReq) returns (TaskSubmitResResp) {}
 }
+
 message TaskSubmitResReq {
-    repeated TaskResultInfo infoGp = 1;
+    repeated TaskInfo infoGp = 1;
 }
 
 message TaskSubmitResResp {
