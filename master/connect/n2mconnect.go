@@ -9,6 +9,7 @@ import (
 	"sync"
 	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
+	"taskAssignmentForEdge/master/predictor"
 	pb "taskAssignmentForEdge/proto"
 	"taskAssignmentForEdge/taskmgt"
 	"time"
@@ -41,13 +42,24 @@ func (ms *Master) InitNodeConn(node *nodemgt.NodeEntity ) error {
 	return nil
 }
 
+func (ms *Master) InitPredictorForNode(no *nodemgt.NodeEntity) {
+	if no == nil {
+		return
+	}
+	no.JoinTST = time.Now().UnixNano()/1e3
+	no.RunTimePredict = ms.runtimePredictMng.GetRunTimePredictor(no.MachineType)
+	no.ConnPredict = ms.connPredictMng.GetConnPredictor(no.GroupIndex)
+}
+
 func (ms *Master) JoinGroup(ctx context.Context, in *pb.JoinRequest) (*pb.JoinReply, error) {
 	nodeid := common.NodeIdentity{in.IpAddr, int(in.Port)}
 	node := ms.Nq.FindNode(nodeid)
 
 	if node == nil {
 		node = nodemgt.CreateNode(in.IpAddr, int(in.Port))
-		node.Bandwidth = in.Bandwith
+		node.Init(in.Bandwidth, int(in.MachineType), int(in.GroupIndex))
+		ms.InitPredictorForNode(node)
+
 		err := ms.InitNodeConn(node)
 		if err != nil {
 			log.Printf("Node(%s:%d) failed to join in because master cannot build up connection with this node ", node.NodeId.IP, node.NodeId.Port)
@@ -62,17 +74,50 @@ func (ms *Master) JoinGroup(ctx context.Context, in *pb.JoinRequest) (*pb.JoinRe
 	return &pb.JoinReply{Reply: true}, nil
 }
 
+func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
+	if node == nil {
+		log.Printf("Error:Empty node pointer in NodeExitEventHandler")
+		return
+	}
+	node.TqLock.Lock()
+	defer node.TqLock.Unlock()
+	preTasks := node.TqPrepare.DequeueAllTasks()
+	for _, task := range preTasks {
+		task.NodeId.IP = ""
+		task.NodeId.Port = 0
+		task.Status = taskmgt.TaskStatusCode_TransmitFailed
+		if task.RunCnt >= taskmgt.TaskMaxRunCnt {
+			ms.ReturnOneTaskToClient(task)
+			log.Printf("Discard and return task(Id:%d) due to exiting of Node(%s:%d) and reaching maxinum run times(%d)", node.NodeId.IP, node.NodeId.Port, task.RunCnt)
+		} else {
+			//clone this task, abandon the origin one
+			newTask := taskmgt.CloneTask(task)
+			newTask.Status = taskmgt.TaskStatusCode_TransmitFailed
+			ms.Tq.EnqueueTask(newTask)
+			log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", node.NodeId.IP, node.NodeId.Port)
+		}
+		task.IsAborted = true //abandon this origin task, , the origin one will drop itself
+	}
+	assignedTasks := node.TqAssign.DequeueAllTasks()
+	for _, task := range assignedTasks {  //move to the schedule queue
+		task.Status = taskmgt.TaskStatusCode_Aborted
+		ms.ReturnOrRescheduleTask(task)
+	}
+}
+
 func (ms *Master) ExitGroup(ctx context.Context, in *pb.ExitRequest) (*pb.ExitReply, error) {
 	nodeid := common.NodeIdentity{in.IpAddr, int(in.Port)}
 	node := ms.Nq.DequeueNode(nodeid)
 	if node != nil {
 		//把待删除节点里面的任务加入总任务队列中, 重新运行
-		ms.Tq.MergeTasks(node.TqPrepare)
-		ms.Tq.MergeTasks(node.TqAssign)
-		//log.Printf("node %s has left from the group", in.IpAddr)
+		ms.NodeExitEventHandler(node)
+		exitTST := time.Now().UnixNano()/1e3
+		node.ConnPredict.Update(exitTST - node.JoinTST)
+		lastedSecs := (exitTST - node.JoinTST)/1e6  //
+		log.Printf("Node(%s:%d) has left from the group actively, and lasted for %d mins %d secs", in.IpAddr, in.Port, lastedSecs/60, lastedSecs%60)
 		return &pb.ExitReply{Reply: true}, nil
 	} else {
-		log.Printf("Unexpected ExitGroup from nonexistent node(IP:%s:%d) ", in.IpAddr, in.Port)
+		log.Printf("Unexpected call of ExitGroup from nonexistent node(%s:%d) ", in.IpAddr, in.Port)
 		return &pb.ExitReply{Reply: false}, nil
 	}
 }
@@ -82,10 +127,16 @@ func (ms *Master) Heartbeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb.H
 	nodeid := common.NodeIdentity{in.IpAddr, int(in.Port)}
 	node := ms.Nq.FindNode(nodeid)
 	if node == nil {
-		log.Printf("Unexpected heartbeat from nonexistent node(IP:%s)", in.IpAddr)
+		log.Printf("Unexpected heartbeat from nonexistent node(%s:%d)", in.IpAddr, in.Port)
 		return &pb.HeartbeatReply{Reply:false}, nil
 	} else {
 		node.LastHeartbeat = time.Now()
+		node.AvgWaitTime = in.AvgExecTime
+		node.WaitQueueLen = int(in.WaitQueueLen)
+		node.HeartbeatSendCnt++
+		if node.HeartbeatSendCnt%10 == 0 { //20s
+			log.Printf("Node(%s:%d) remains %d tasks in waiting queue with average execute time %d", node.NodeId.IP, node.NodeId.Port, node.WaitQueueLen, node.AvgWaitTime)
+		}
 		return &pb.HeartbeatReply{Reply:true}, nil
 	}
 }
@@ -96,40 +147,21 @@ func (ms *Master) StartHeartbeatChecker(wg *sync.WaitGroup) {
 		nodes := ms.Nq.CheckNode()
 		//把所有待删除节点里面的任务加入总任务队列中, 重新运行
 		for _, node := range nodes {
-
-			node.TqLock.Lock()
-			defer node.TqLock.Unlock()
-			preTasks := node.TqPrepare.DequeueAllTasks()
-			for _, task := range preTasks {
-				//clone this task, abandon the origin one
-				newTask := taskmgt.CloneTask(task)
-				task.NodeId.IP = ""
-				task.NodeId.Port = 0
-				task.Status = taskmgt.TaskStatusCode_TransmitFailed
-				task.IsAborted = true //abandon this origin task
-
-				newTask.Status = taskmgt.TaskStatusCode_TransmitFailed
-				if newTask.RunCnt >= taskmgt.TaskMaxRunCnt {
-					ms.ReturnOneTaskToClient(newTask)
-				} else {
-					ms.Tq.EnqueueTask(newTask)
-				}
-			}
-			assignedTasks := node.TqAssign.DequeueAllTasks()
-			for _, task := range assignedTasks {  //move to the schedule queue
-				task.Status = taskmgt.TaskStatusCode_Aborted
-				if task.RunCnt >= taskmgt.TaskMaxRunCnt {
-					ms.ReturnOneTaskToClient(task)
-				} else {
-					ms.Tq.EnqueueTask(task)
-				}
-			}
+			ms.NodeExitEventHandler(node)
+			log.Printf("Node(%s:%d) has been removed due to losing connection", node.NodeId.IP, node.NodeId.Port)
 		}
 	}
 
 	if wg != nil {
 		wg.Done()
 	}
+}
+
+func  (ms *Master) UpdateRuntimePredictors(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) {
+	//execute time
+	fpair := predictor.CreateFeaturePairs(task)
+	execTime := task.FinishTST - task.ExecTST
+	node.RunTimePredict.Update(fpair, execTime)
 }
 
 //接受node的任务结果
@@ -139,16 +171,16 @@ func (ms *Master) SendTaskResults(ctx context.Context, in *pb.TaskResultReq) (*p
 		nodeid := common.NodeIdentity{taskinfo.AssignNodeIP, int(taskinfo.AssignNodePort)}
 		node := ms.Nq.FindNode(nodeid)
 		if node == nil {
-			log.Printf("Ignore: Receive a discarded task %d due to nonexistent edge node[%s:%d]", taskinfo.TaskId, taskinfo.AssignNodeIP, taskinfo.AssignNodePort)
+			log.Printf("Ignore: Receive a discarded task(Id:%d, run times:%d) due to departed edge node[%s:%d]", taskinfo.TaskId, taskinfo.RunCnt, taskinfo.AssignNodeIP, taskinfo.AssignNodePort)
 			continue
 		}
 		task := node.TqAssign.FindTask(taskinfo.TaskId)
 		if task == nil {  //nonexistent task or finished rescheduled task
-			log.Printf("Ignore: Receive a discarded task %d due to nonexistent task in queue", taskinfo.TaskId)
+			log.Printf("Ignore: Receive a discarded task(Id:%d, run times:%d) due to nonexistent task in queue", taskinfo.TaskId, taskinfo.RunCnt)
 			continue
 		}
 		if task.RunCnt != taskinfo.RunCnt { //have been rescheduled
-			log.Printf("Unmatched Runct for task(%d), % in master and received %d", task.TaskId, task.RunCnt, taskinfo.RunCnt)
+			log.Printf("Unmatched Runct for task(%d), %d in master and received %d", task.TaskId, task.RunCnt, taskinfo.RunCnt)
 			log.Printf("Ignore: Receive a discarded task %d due to having rescheduled", taskinfo.TaskId)
 			continue
 		}
@@ -156,16 +188,12 @@ func (ms *Master) SendTaskResults(ctx context.Context, in *pb.TaskResultReq) (*p
 		node.TqAssign.DequeueTask(task.TaskId)  //Remove this task from the Assigned Queue
 		if task.Status != taskmgt.TaskStatusCode_Success { //reschedule
 			log.Printf("Task(Id:%d) failed to excute in Node(%s:%d)", task.TaskId, task.NodeId.IP, task.NodeId.Port)
-			if task.RunCnt >= taskmgt.TaskMaxRunCnt { //reach the max count, send back to client with Failure Status
-				ms.ReturnOneTaskToClient(task)
-			} else {
-				ms.Tq.EnqueueTask(task)
-			}
+			ms.ReturnOrRescheduleTask(task)
 		} else {
 			//send back to client
 			ms.ReturnOneTaskToClient(task)
-			//update statistical data to dispatcher
-			ms.dispatcher.UpdateDispatcherStat(task, node)
+			//update task info to predictor
+			ms.UpdateRuntimePredictors(task, node)
 		}
 	}
 

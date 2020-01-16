@@ -105,11 +105,11 @@ func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEnti
 func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 	task.RunCnt++
 
-	log.Printf("Start to transmit Task %d to node[%s:%d] in the %dth time\n", task.TaskId, task.NodeId.IP, task.NodeId.Port, task.RunCnt)
+	//log.Printf("Start to transmit Task %d to node[%s:%d] in the %dth time\n", task.TaskId, task.NodeId.IP, task.NodeId.Port, task.RunCnt)
 
 	node := ms.Nq.FindNode(task.NodeId)
 	if node == nil { //刚好节点退出了, 已经被处理, 新clone的task已经被加入调度队列
-		log.Printf("Info: failed to transmit task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
+		log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
 		return
 	}
 
@@ -123,20 +123,20 @@ func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 	//检查是否对应node已经断开
 	node = ms.Nq.FindNode(task.NodeId)
 	if node == nil  { //节点在传输过程中退出了,新clone的task已经被加入调度队列
-		log.Printf("Info: failed to transmit task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
+		log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
 		return  //abandon this task
 	}
 
 	node.TqLock.Lock()
 	defer node.TqLock.Unlock()
 	if task.IsAborted == true {
-		log.Printf("Info: failed to transmit task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
+		log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
 	} else {
 		entity := node.TqPrepare.FindTask(task.TaskId)
 		if entity == nil {
 			task.Status = taskmgt.TaskStatusCode_TransmitFailed //abandon this task
 			log.Printf("Error: Cannot find task(Id:%d) in the prepare queue of Node(%s:%d)", task.TaskId, node.NodeId.IP, node.NodeId.Port)
-		} else { //节点仍然在
+		} else { //任务 在节点的Prepare队列中
 			taskinfo := &pb.TaskInfo{}
 			taskmgt.TranslateAssigningTaskE2P(task, taskinfo)
 			taskGrp := []*pb.TaskInfo{taskinfo}
@@ -157,13 +157,9 @@ func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 
 			node.TqPrepare.DequeueTask(task.TaskId)
 			if task.Status == taskmgt.TaskStatusCode_TransmitFailed {
-				if task.RunCnt >= taskmgt.TaskMaxRunCnt {
-					ms.ReturnOneTaskToClient(task)
-				} else {
-					ms.Tq.EnqueueTask(task)
-				}
+				ms.ReturnOrRescheduleTask(task)
 			} else { //success
-				log.Printf("Succeed to assign task(Id:%d) to Node(%s:%d)", task.TaskId, node.NodeId.IP, node.NodeId.Port)
+				//log.Printf("Succeed to assign task(Id:%d) to Node(%s:%d)", task.TaskId, node.NodeId.IP, node.NodeId.Port)
 				node.TqAssign.EnqueueTask(task)
 			}
 		}
@@ -206,7 +202,7 @@ func (ms *Master) AssignSimTasksForNode(node *nodemgt.NodeEntity) {
 	}
 
 	tasks := node.TqPrepare.GetTasksByStatus(taskmgt.TaskStatusCode_Assigned)  //task will be removed to TqAssign when succeed to transmit
-	log.Printf("Get %d tasks in queue(%s) that needs to transmit", len(tasks), node.TqPrepare.Name)
+	//log.Printf("Get %d tasks in queue(%s) that needs to transmit", len(tasks), node.TqPrepare.Name)
 	for _, task := range tasks {
 		task.Status = taskmgt.TaskStatusCode_Transmiting
 		go ms.SimulateTransmitOneTask(task)
@@ -228,7 +224,19 @@ func (ms *Master) AssignTaskForNode(node *nodemgt.NodeEntity) {
 
 func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 	for range time.Tick(time.Millisecond*common.AssgnTimeout) {
-		isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
+		//isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
+		isNeedAssign := false
+
+		if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
+			isNeedAssign = ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
+		} else{
+			ms.preDispatchCnt += ms.Tq.GettaskNum()
+			isNeedAssign = ms.defaultDispachter.MakeDispatchDecision(ms.Tq, ms.Nq)
+			if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
+				log.Printf("Change to the closen algorithm")
+			}
+		}
+
 		if isNeedAssign == false {
 			continue
 		}

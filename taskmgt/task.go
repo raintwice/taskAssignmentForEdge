@@ -69,7 +69,8 @@ type TaskEntity struct {
 	ExecTST              int64    `protobuf:"varint,21,opt,name=ExecTST,proto3" json:"ExecTST,omitempty"`
 	FinishTST            int64    `protobuf:"varint,22,opt,name=FinishTST,proto3" json:"FinishTST,omitempty"`
 
-	RunCnt               int32     //update after assignment is finished
+	RunCnt               int32     //update when assignment begins
+	//TransmitCnt          int32     //maximum 3 times per Run
 	//attribute changed in all steps
 	Status               int32    `protobuf:"varint,19,opt,name=StatusCode,proto3" json:"StatusCode,omitempty"`
 	Err                  error   `protobuf:"bytes,20,opt,name=Err,proto3" json:"Err,omitempty"`
@@ -116,6 +117,13 @@ func CloneTask(task *TaskEntity) *TaskEntity {
 	return newTask
 }
 
+func (t *TaskEntity)UpdateTaskPrediction(transTime int64, waitTime int64, execTime int64, extraTime int64) {
+	t.PredictExecTime = execTime
+	t.PredictTransTime = transTime
+	t.PredictWaitTime = waitTime
+	t.PredictExtraTime = extraTime
+}
+
 //run the code
 func (t *TaskEntity) Execute() error {
 	if t.TaskName == "" {
@@ -138,6 +146,7 @@ func (t *TaskEntity) Execute() error {
 //run simulation task
 func (t *TaskEntity) RunSimulation() error {
 	t.ExecTST = time.Now().UnixNano()/1e3
+	t.Status = TaskStatusCode_Running
 	time.Sleep(time.Duration(t.RuntimePreSet)*time.Microsecond)
 	t.FinishTST = time.Now().UnixNano()/1e3
 	t.Status = TaskStatusCode_Success

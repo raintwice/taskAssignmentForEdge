@@ -5,6 +5,8 @@ import (
 	//"google.golang.org/grpc"
 	//"io"
 	"log"
+	"time"
+
 	//"os"
 	//"sync"
 	//"taskAssignmentForEdge/common"
@@ -57,5 +59,17 @@ func (ms *Master) ReturnTasksToClient(taskgp []*taskmgt.TaskEntity) {
 		for _, task := range taskgp {
 			log.Printf("%s  ", task.TaskName)
 		}
+	}
+}
+
+// if task status is not expected
+func (ms *Master) ReturnOrRescheduleTask(task *taskmgt.TaskEntity) {
+	if task.RunCnt >= taskmgt.TaskMaxRunCnt {
+		task.FinishTST = time.Now().UnixNano()/1e3
+		ms.ReturnOneTaskToClient(task)
+		log.Printf("Return result of failed task(Id:%d) due to reaching maxinum run times(%d)", task.TaskId, task.RunCnt)
+	} else {
+		ms.Tq.EnqueueTask(task)
+		//log.Printf("Enqueue and reschedule task(Id:%d) with used run times(%d)", task.TaskId, task.RunCnt)
 	}
 }

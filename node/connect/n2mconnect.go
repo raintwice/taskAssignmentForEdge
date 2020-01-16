@@ -29,7 +29,7 @@ func (no *Node) InitConnection() {
     var err error
     no.conn, err = grpc.Dial(no.Maddr + ":" + strconv.Itoa(no.Mport), grpc.WithInsecure())
     if err != nil {
-        log.Fatal("Cannot not connect with master(%s:%d): %v", no.Maddr, no.Mport, err)
+        log.Fatal("Cannot connect with master(%s:%d): %v", no.Maddr, no.Mport, err)
     }
 }
 
@@ -40,7 +40,8 @@ func (no *Node) Join() {
 	}
     c := pb.NewNode2MasterConnClient(no.conn)
 
-    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port:int32(no.Sport), Bandwith:no.BandWidth})
+    r, err := c.JoinGroup(context.Background(), &pb.JoinRequest{IpAddr: no.Saddr, Port:int32(no.Sport), Bandwidth:no.BandWidth,
+    	MachineType:int32(no.MachineType), GroupIndex:int32(no.GroudIndex)})
     if err != nil {
         log.Printf("Could not call JoinGroup when joining: %v", err)
         return
@@ -74,6 +75,8 @@ func (no *Node) Exit() {
 }
 
 func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
+	log.Printf("StartNetworkManager")
+	rand.Seed(time.Now().UnixNano())
 	time.Sleep(time.Duration(no.StartJoinTime)*time.Second)
 	no.Join()
 	interval := time.Duration(float64(time.Duration(no.PscTimeAvg)*time.Minute)*(1-no.Avl)/no.Avl)
@@ -93,8 +96,18 @@ func (no *Node) SendHeartbeat()  {
 		return
 	}
 	c := pb.NewNode2MasterConnClient(no.conn)
+	req := &pb.HeartbeatRequest{IpAddr: no.Saddr, Port:int32(no.Sport)}
+	req.AvgExecTime = no.AvgExecTime
+	no.curTaskRwLock.RLock()
+	queueLen := no.CurTaskNum
+	no.curTaskRwLock.RUnlock()
+	if queueLen <= no.PoolCap {
+		req.WaitQueueLen = 0
+	} else {
+		req.WaitQueueLen = int32(queueLen - no.PoolCap)
+	}
 
-	r, err := c.Heartbeat(context.Background(), &pb.HeartbeatRequest{IpAddr: no.Saddr, Port:int32(no.Sport)})
+	r, err := c.Heartbeat(context.Background(), req)
 	if err != nil {
 		log.Printf("could not send heartbeat to master(%s:%d): %v", no.Maddr, no.Mport, err)
 		no.Join()
@@ -108,12 +121,14 @@ func (no *Node) SendHeartbeat()  {
 }
 
 func (no *Node) StartHeartbeatSender(wg *sync.WaitGroup) {
+	log.Printf("StartHeartbeatSender")
 	for range time.Tick(time.Millisecond*common.Timeout) {
 		no.SendHeartbeat()
 	}
 	wg.Done()
 }
 
+//Grpc interface for send tasks
 func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 	c := pb.NewNode2MasterConnClient(no.conn)
 
@@ -144,19 +159,20 @@ func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 	}
 }
 
-func SendOneTask(no *Node, task *taskmgt.TaskEntity) {
+//send one task
+func (no *Node) SendOneTask(task *taskmgt.TaskEntity) {
 	if no == nil || task == nil {
 		return
 	}
-	log.Printf("Succeed to excute task(Id:%d) in Node(%s:%d)", task.TaskId, no.Saddr, no.Sport)
-	taskgp := make([]*taskmgt.TaskEntity,0)
-	taskgp = append(taskgp, task)
-	no.SendTaskResults(taskgp)
+	taskGp := make([]*taskmgt.TaskEntity,0)
+	taskGp = append(taskGp, task)
+	no.SendTaskResults(taskGp)
 }
 
-func SendTasks(no *Node, taskgp []*taskmgt.TaskEntity) {
-	if no == nil || taskgp == nil || len(taskgp) == 0 {
+//send tasks
+func (no *Node) SendTasks(taskGp []*taskmgt.TaskEntity) {
+	if no == nil || taskGp == nil || len(taskGp) == 0 {
 		return
 	}
-	no.SendTaskResults(taskgp)
+	no.SendTaskResults(taskGp)
 }

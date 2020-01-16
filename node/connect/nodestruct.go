@@ -6,13 +6,6 @@ import (
 	"taskAssignmentForEdge/taskmgt"
 )
 
-const (
-	MachineType_Simualted = iota
-	MachineType_RaspPi_3B
-	MachineType_RaspPi_4B
-	MachineType_Surface_M3
-)
-
 type Node struct {
 	Maddr string
 	Mport int
@@ -23,18 +16,26 @@ type Node struct {
 	StartJoinTime int //duration to join after booted up
 
 	MachineType int
+	GroudIndex  int   //indicate one group with certain network environment
+	BandWidth float64   //Unit: Mbps
+
+	// the PstTime with the same group index should be the same
 	PscTimeAvg int   //expectation of presence time in minutes
 	PscTimeSigma int  //standard deviation in seconds
 	Avl   float64  //availability
 
-
-	conn *grpc.ClientConn  //与master的连接
+	conn *grpc.ClientConn  //call master
 	//Tq *taskmgt.TaskQueue  //等待队列
 	pool *taskmgt.Pool
 
 	//pendingTasks []*taskmgt.TaskEntity  //等待传输时间
 	//rwLock sync.RWMutex    //pendingTasks的锁
-	BandWidth float64   //Unit: MB/s
+
+	PoolCap int //worker数量
+	AvgExecTime int64  //平均任务执行时间
+	CurTaskNum int  //队列长度即当前任务总数，等待队列长度= CurTaskNum - PoolCap if CurTaskNum < PoolCap else 0
+	curTaskRwLock  sync.RWMutex//
+	FinishTaskCnt int
 }
 
 func NewNode(addr string, port int, sport int) (* Node) {
@@ -46,13 +47,18 @@ func NewNode(addr string, port int, sport int) (* Node) {
 	}
 }
 
-func (no *Node) SetParameters(bandWidth float64, machineType int, pscTimeAvg int, pscTimeSig int, avl float64, startTime int){
+func (no *Node) SetNodePara(bandWidth float64, machineType int, startTime int, poolCap int){
 	no.BandWidth = bandWidth
 	no.MachineType = machineType
+	no.StartJoinTime = startTime
+	no.PoolCap = poolCap
+}
+
+func (no *Node) SetNetworkPara(groupIndex int, pscTimeAvg int, pscTimeSig int, avl float64) {
+	no.GroudIndex = groupIndex
 	no.PscTimeAvg = pscTimeAvg
 	no.PscTimeSigma = pscTimeSig
 	no.Avl = avl
-	no.StartJoinTime = startTime
 }
 
 func  (no *Node) StartPool(cap int, wg *sync.WaitGroup) {

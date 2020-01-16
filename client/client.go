@@ -19,9 +19,9 @@ var (
 func init() {
 	flag.BoolVar(&h, "h", false, "print help information")
 	flag.StringVar(&evalDir, "dir", "Evalutionfiles", "set the directory of task files")
-	flag.Float64Var(&arrvialRate, "rate", 20, "set the job arrival rate")
-	flag.IntVar(&pretrainNum, "ptrainNum", 2000, "set the num of tasks used to pretrain tasks")
-	flag.IntVar(&evalNum, "evalNum", 6000, "set the num of tasks used to evaluate ")
+	flag.Float64Var(&arrvialRate, "rate", 150, "set the job arrival rate")
+	flag.IntVar(&pretrainNum, "ptrainNum", 9000, "set the num of tasks used to pretrain tasks")
+	flag.IntVar(&evalNum, "evalNum", 27000, "set the num of tasks used to evaluate ")
 }
 
 func usage() {
@@ -42,6 +42,7 @@ func main() {
 	//log.Printf("rate:%f", arrvialRate)
 	//log.Printf("pretrainNum:%d, evalNum:%d", pretrainNum, evalNum)
 	client := connect.NewClient(evalDir, arrvialRate, pretrainNum, evalNum)
+	client.InitConnection()
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go client.StartRecvResultServer(&wg)

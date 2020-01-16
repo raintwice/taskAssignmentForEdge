@@ -3,7 +3,6 @@ package connect
 import (
 	"encoding/csv"
 	"fmt"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io/ioutil"
 	"log"
@@ -16,7 +15,16 @@ import (
 	pb "taskAssignmentForEdge/proto"
 	"taskAssignmentForEdge/taskmgt"
 	"time"
+	"golang.org/x/net/context"
 )
+
+func (clt *Client) InitConnection() {
+	var err error
+	clt.conn, err = grpc.Dial("127.0.0.1"+":"+strconv.Itoa(common.MasterPortForClient), grpc.WithInsecure())
+	if err != nil {
+		log.Fatal("Cannot not connect with master(%s:%d): %v", "127.0.0.1", common.MasterPortForClient, err)
+	}
+}
 
 //client as recevier
 /*
@@ -50,28 +58,26 @@ func (clt *Client) SubmitTask(taskgp []*taskmgt.TaskEntity) {
 	}
 }*/
 
-func (clt *Client) SubmitOneTask(taskReq *pb.TaskSubmitReq ) {
+func (clt *Client) SubmitOneTask(taskReq *pb.TaskSubmitReq ) bool {
 
-	conn, err := grpc.Dial("127.0.0.1"+":"+strconv.Itoa(common.MasterPortForClient), grpc.WithInsecure())
-	if err != nil {
-		log.Fatal("Cannot not connect with master(%s:%d): %v", "", "127.0.0.1", common.MasterPortForClient, err)
-	}
-	defer conn.Close()
-	c := pb.NewClient2MasterConnClient(conn)
+	c := pb.NewClient2MasterConnClient(clt.conn)
 
 	r, err := c.SubmitTasks(context.Background(), taskReq)
 	if err != nil {
-		log.Fatalf("Could not submit task: %v", err)
+		log.Printf("Could not submit task: %v", err)
+		return false
 	}
 	if (r.Reply) {
 		log.Printf("Successed to submit task %d", clt.SentTaskCnt)
 		clt.SentTaskCnt++
+		return true
 	} else {
 		log.Printf("Failed to submit task ")
+		return false
 	}
 }
 
-//possion process, get the interval, per minutes
+//possion process, get the interval, ratePara samples per minutes
 func NextTime(ratePara float64) float64{
 	return -math.Log(1.0 - rand.Float64())/ratePara
 }
@@ -79,20 +85,26 @@ func NextTime(ratePara float64) float64{
 //filter_name = ['user name','cpu','ram', 'disk','runtime','job_name','ljobname','datasize','deadlineslack']
 //build tasks from csv, and send them
 
-func (clt *Client)buildSendOneTask(record []string) {
+func (clt *Client)buildSendOneTask(record []string) bool {
 	task := taskmgt.TranslateRecordToProtoTask(record)
-	//For simulation, reduce to 1/5
-	task.RuntimePreSet = task.RuntimePreSet/5
+	//For simulation, reduce to 1/10
+	task.RuntimePreSet = task.RuntimePreSet/10
 	infogp := []*pb.TaskInfo{task}
 	taskReq := pb.TaskSubmitReq{TaskGp: infogp}
-	clt.SubmitOneTask(&taskReq)
+	return  clt.SubmitOneTask(&taskReq)
 }
 
 func (clt *Client) ProduceTasks() {
 	//log.Printf("Begin to produce tasks")
+	_, err := os.Stat(clt.EvaluationDir)
+	if err != nil {
+		log.Printf("Error: there is no task files or wrong file directory")
+		return
+	}
+
 	files, _ := ioutil.ReadDir(clt.EvaluationDir)
 	if len(files) == 0 {
-
+		log.Printf("Error: there is no task files")
 	}
 	//fmt.Println(files)
 	for _, file := range files{
@@ -112,25 +124,33 @@ func (clt *Client) ProduceTasks() {
 		log.Printf("Begin to produce pretain tasks")
 		//clt.EvaluationStatus = EvaluationStatus_Pretrain
 		recordCnt := 0
-		for ; recordCnt < clt.PretrainNum; recordCnt++ {
+		for ; recordCnt < clt.PretrainNum; {
 			interval := NextTime(clt.jobArrivalRate) //in min
 			duration := time.Duration(interval*float64(time.Minute))
 			//log.Printf("next time: %v", duration)
 			time.Sleep(duration)
-			clt.buildSendOneTask(records[recordCnt])
+			if res := clt.buildSendOneTask(records[recordCnt]); res == true {
+				recordCnt++
+			} else {
+				continue
+			}
 		}
 
 		//wait until all the pretrain tasks are received
 		for ;clt.EvaluationStatus == EvaluationStatus_Pretrain; {
-			time.Sleep(5*time.Second)
+			time.Sleep(2*time.Second)
 		}
 
 		log.Printf("Begin to produce evaluation tasks")
-		for ;recordCnt < clt.PretrainNum + clt.EvalSamplesNum; recordCnt++ {
+		for ;recordCnt < clt.PretrainNum + clt.EvalSamplesNum; {
 			interval := NextTime(clt.jobArrivalRate)
 			duration := time.Duration(interval*float64(time.Second)*60)
 			time.Sleep(duration)
-			clt.buildSendOneTask(records[recordCnt])
+			if res := clt.buildSendOneTask(records[recordCnt]); res == true {
+				recordCnt++
+			} else {
+				continue
+			}
 		}
 	}
 

@@ -67,6 +67,8 @@ func (clt *Client) ReturnSubmittedTasks(ctx context.Context, in *pb.TaskSubmitRe
 				writer := csv.NewWriter(newfile)
 				if werr := writer.WriteAll(clt.EvalTaskInfoGrp); werr != nil {
 					log.Printf("Error: cannot write to EvalTaskResult.csv")
+				} else {
+					log.Printf("Success!Evaluation is finished")
 				}
 			}
 		}

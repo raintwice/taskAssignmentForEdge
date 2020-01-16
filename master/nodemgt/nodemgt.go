@@ -9,28 +9,34 @@ import (
 	"time"
 
 	"taskAssignmentForEdge/common"
-	//"fmt"
-	//"log"
+	"taskAssignmentForEdge/master/predictor"
 	"taskAssignmentForEdge/taskmgt"
 )
 
 type NodeEntity struct {
 	NodeId common.NodeIdentity
 
-
-	//其他属性
+	//network
+	Conn *grpc.ClientConn        //master与node的通信连接
 	LastHeartbeat time.Time
+	HeartbeatSendCnt int
 	Bandwidth float64
 
+	//task
 	TqAssign *taskmgt.TaskQueue  //已经分配到节点的任务队列
 	TqPrepare *taskmgt.TaskQueue //待分配任务队列
 	TqLock sync.RWMutex  //同时控制TqAssign和TqPrepare两个队列
 
-	Conn *grpc.ClientConn        //master与node的通信连接
-	AverWaitTime int32    //队列平均等待时间 microsec
-	FinishTaskCnt int
+	AvgWaitTime int64    //队列平均等待时间 微妙 //改成任务平均完成时间
+	WaitQueueLen    int  //等待队列长度
 
+	MachineType int
+	RunTimePredict *predictor.RunTimePredictor
 
+	//presence time
+	GroupIndex int
+	ConnPredict *predictor.ConnPredictor
+	JoinTST int64  // in us
 }
 
 type NodeQueue struct {
@@ -52,6 +58,12 @@ func CreateNode(ipAddr string, port int) *NodeEntity {
 	node.TqPrepare = taskmgt.NewTaskQueue("Assigned:" + ipAddr + ":" + strconv.Itoa(port))
 	node.LastHeartbeat = time.Now()
 	return node
+}
+
+func (no *NodeEntity) Init(bw float64, machinetype int, groudindex int) {
+	no.Bandwidth = bw
+	no.MachineType = machinetype
+	no.GroupIndex = groudindex
 }
 
 /*创建节点队列*/
@@ -109,7 +121,7 @@ func (nq *NodeQueue) DequeueNode(nodeid common.NodeIdentity ) (node *NodeEntity)
 		node = nil
 	}
 	nq.Rwlock.Unlock()
-	log.Printf("Node(IP:%s:%d) has exited from the node queue", node.NodeId.IP, node.NodeId.Port)
+	log.Printf("Node(IP:%s:%d) has exited from the node queue", nodeid.IP, nodeid.Port)
 	return
 }
 
@@ -121,6 +133,7 @@ func (nq *NodeQueue) GetQueueNodeNum() (len int) {
 	return
 }
 
+//Returns the nodes to be deleted
 func (nq *NodeQueue) CheckNode()   (toDeleteNodes []*NodeEntity) {
 	//log.Println("Running CheckNode")
 	if nq == nil || nq.GetQueueNodeNum() == 0 {

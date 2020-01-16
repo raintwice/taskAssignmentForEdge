@@ -14,7 +14,9 @@ service Node2MasterConn {
 message JoinRequest {
     string ipAddr = 1; //tell master the ip of this node
     int32 port = 2;    //tell master the port of the node
-    double bandwith = 3;
+    double bandwidth = 3;
+    int32 machineType = 4;
+    int32 groupIndex  = 5;
 }
 
 message JoinReply {
@@ -35,6 +37,8 @@ message ExitReply {
 message HeartbeatRequest {
     string ipAddr = 1;
     int32  port   = 2;
+    int32  waitQueueLen = 3;
+    int64  avgExecTime  = 4;
 }
 
 message HeartbeatReply {
@@ -44,37 +48,37 @@ message HeartbeatReply {
 message TaskInfo
 {
 //attribute needed to input
-    string Username = 1;
+    string username = 1;
     double CPUReq   = 2;
-    double MemoryReq = 3;
-    double DiskReq   = 4;
-    int64  RuntimePreSet  = 5;  //for simualtion in edge nodes
-    string TaskName  = 6; //jobname
-    string LogicName = 7;
-    double DataSize  = 8;
-    int32  DeadlineSlack = 9;
-    string TaskLocation  = 10; //needed if client to master
+    double memoryReq = 3;
+    double diskReq   = 4;
+    int64  runtimePreSet  = 5;  //for simualtion in edge nodes
+    string taskName  = 6; //jobname
+    string logicName = 7;
+    double dataSize  = 8;
+    int32  deadlineSlack = 9;
+    string taskLocation  = 10; //needed if client to master
 
 //attribute created in the master
-    int32  TaskId   = 11; //created by master
-    int64  SubmitTST = 12; //timestamp when accepted by master
-    int64  PredictExecTime = 13;
-    int64  PredictTransTime = 14;
-    int64  PredictWaitTime  = 15;
-    int64  PredictExtraTime = 16;
-    string AssignNodeIP = 17;
-    int32  AssignNodePort = 18;
-    int64  AssignTST =  19; //timestamp when begin to assign
+    int32  taskId   = 11; //created by master
+    int64  submitTST = 12; //timestamp when accepted by master
+    int64  predictExecTime = 13;
+    int64  predictTransTime = 14;
+    int64  predictWaitTime  = 15;
+    int64  predictExtraTime = 16;
+    string assignNodeIP = 17;
+    int32  assignNodePort = 18;
+    int64  assignTST =  19; //timestamp when begin to assign
 
 //attribute created in the node
-    int64  RecvTST   = 20;  //timestamp when receivied by node
-    int64  ExecTST   =  21; //timestamp when begin to execute
-    int64  FinishTST =  22; //timestamp when begin to execute
-    int32  RunCnt    =  23; //update when accepted by node
+    int64  recvTST   = 20;  //timestamp when receivied by node
+    int64  execTST   =  21; //timestamp when begin to execute
+    int64  finishTST =  22; //timestamp when begin to execute
+    int32  runCnt    =  23; //update when accepted by node
 
 //attribute changed in all steps
-    int32 StatusCode  = 24;
-    string Err        = 25;
+    int32 statusCode  = 24;
+    string err        = 25;
 }
 
 //node send task result
@@ -94,8 +98,8 @@ service Master2NodeConn {
 
 //master assgin one task to node
 message TaskChunk {
-    TaskInfo Info = 1;
-    bytes Content = 2;
+    TaskInfo info = 1;
+    bytes content = 2;
 }
 
 enum SendStatusCode {
@@ -105,8 +109,8 @@ enum SendStatusCode {
 }
 
 message SendStatus {
-    string Message = 1;
-    SendStatusCode Code = 2;
+    string message = 1;
+    SendStatusCode code = 2;
 }
 
 message SimTaskAssignReq {

@@ -74,10 +74,43 @@ END:
 
 	//no.Tq.AddTask(newTask)
 	//提交该任务至任务队列
-	newTask.SetTaskCallback(SendOneTask, no, newTask)
+	newTask.SetTaskCallback(TaskFinishedHandler, no, newTask)
 	go no.pool.Submit(newTask)
 
 	return err
+}
+
+func (no *Node) TaskRecvHandler(task *taskmgt.TaskEntity) {
+	task.RecvTST = time.Now().UnixNano()/1e3
+	task.Status = taskmgt.TaskStatusCode_WaitForExec
+	//setup callback
+	task.SetTaskCallback(TaskFinishedHandler, no, task)
+	//提交任务，队列长度加一
+	no.curTaskRwLock.Lock()
+	no.CurTaskNum++
+	no.curTaskRwLock.Unlock()
+	no.pool.Submit(task)
+}
+
+func TaskFinishedHandler(no *Node, task *taskmgt.TaskEntity){
+	if no == nil || task == nil {
+		return
+	}
+	log.Printf("Succeed to excute task(Id:%d) in Node(%s:%d)", task.TaskId, no.Saddr, no.Sport)
+	//任务执行完毕，队列长度减一
+	no.curTaskRwLock.Lock()
+	no.CurTaskNum--
+	no.curTaskRwLock.Unlock()
+
+	const Decay_Weight = 0.5
+
+	if no.FinishTaskCnt == 0 {
+		no.AvgExecTime = task.FinishTST - task.ExecTST
+	} else {
+		no.AvgExecTime = int64(float64(no.AvgExecTime)*Decay_Weight + float64(task.FinishTST - task.ExecTST)*(1 - Decay_Weight))
+	}
+	no.FinishTaskCnt++
+	no.SendOneTask(task)
 }
 
 /*
@@ -92,22 +125,14 @@ func (no *Node) SimulateTransmitProcess(task *taskmgt.TaskEntity) {
 }
 */
 
-
-func (no *Node) SimulateRunningProcess(task *taskmgt.TaskEntity) {
-	task.RecvTST = time.Now().UnixNano()/1e3
-	//setup callback
-	task.SetTaskCallback(SendOneTask, no, task)
-	no.pool.Submit(task)
-}
-
 func (no *Node)  AssignSimTasks(ctx context.Context, in *pb.SimTaskAssignReq) (*pb.SendStatus, error) {
 	for _, taskinfo := range in.GetTaskGp() {
 		//接受任务并运行 TBD
 		//task := &taskmgt.TaskEntity{}
 		newTask := taskmgt.CreateTask(taskinfo.TaskId)
 		taskmgt.TranslateAssigningTaskP2E(taskinfo, newTask)
-		log.Printf("Received task(Id:%d) in Node(%s:%d)", newTask.TaskId, no.Saddr, no.Sport)
-		go no.SimulateRunningProcess(newTask)
+		log.Printf("Received task(Id:%d, run times:%d) in Node(%s:%d)", newTask.TaskId, newTask.RunCnt, no.Saddr, no.Sport)
+		go no.TaskRecvHandler(newTask)
 	}
 	return &pb.SendStatus{Message:"", Code:pb.SendStatusCode_Ok}, nil
 }

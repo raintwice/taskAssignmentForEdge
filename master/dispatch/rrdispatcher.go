@@ -10,12 +10,12 @@ import (
 )
 
 //Round Robin
-type DefaultDispatcher struct {
+type RRDispatcher struct {
 	lastNode *nodemgt.NodeEntity
 }
 
-func NewDefaultDispatcher() (*DefaultDispatcher) {
-	return &DefaultDispatcher{
+func NewRRDispatcher() (*RRDispatcher) {
+	return &RRDispatcher{
 		lastNode:nil,
 	}
 }
@@ -79,7 +79,7 @@ func ( dp * DefaultDispatcher) CheckNode(nq *nodemgt.NodeQueue) {
 
 //Round Robin
 //para: 待分配任务队列， 节点队列
-func ( dp * DefaultDispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) bool {
+func ( dp * RRDispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) bool {
 
 	if tq == nil || nq == nil || tq.GettaskNum() == 0 || nq.GetQueueNodeNum() == 0 {
 		return false
@@ -97,10 +97,14 @@ func ( dp * DefaultDispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *n
 	}
 	for _, task := range tasks {
 		node := e.Value.(*nodemgt.NodeEntity)
+
+		/*
 		task.NodeId.IP = node.NodeId.IP
 		task.NodeId.Port = node.NodeId.Port
 		task.Status = taskmgt.TaskStatusCode_Assigned
-		node.TqPrepare.EnqueueTask(task)
+		node.TqPrepare.EnqueueTask(task)*/
+		AssignTaskToNode(task, node)
+
 		e = e.Next()
 		if e == nil {
 			e = nq.NodeList.Front()
@@ -110,11 +114,4 @@ func ( dp * DefaultDispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *n
 	nq.Rwlock.Unlock()
 	//log.Printf("Succeed to make dispatching decision, remain %d tasks in th global queue", tq.GettaskNum())
 	return true
-}
-
-const Decay_Weight = 0.4
-
-func ( dp * DefaultDispatcher) UpdateDispatcherStat(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) {
-	node.AverWaitTime = int32(float64(node.AverWaitTime)*Decay_Weight + float64(task.ExecTST-task.RecvTST)*(1-Decay_Weight))
-	node.FinishTaskCnt ++
 }
