@@ -50,6 +50,8 @@ func TestHistogram(t *testing.T) {
 	fmt.Println(his.SumFromNInf(19.333333333333332) - his.SumFromNInf(15))
 	fmt.Println(his.SumBetweenRange(15, 19.333333333333332))
 
+	fmt.Printf("sum to 45: %f", his.SumFromNInf(45))
+
 	fmt.Println(his.Uniform(3))
 
 	fmt.Printf("Fraction after time-shifting : \n")
@@ -74,7 +76,7 @@ func TestHistogram(t *testing.T) {
 	if !common.IsValueEqual(sum, 1.00) {
 		t.Errorf("expect:[%f], actually:[%f]", 1.0, sum)
 	}
-	//fmt.Println(his.CalFractionFromOffset(2))
+	fmt.Println(his.CalFractionFromOffset(2))
 	res = his.CalFractionFromOffset(2)
 	sum = 0.0
 	for _, v := range res.Frac {
@@ -100,4 +102,46 @@ func TestJointProbaByEqualOrLess(t *testing.T) {
 	X := &HistogramFrac{[]HistoFrac{{20, 0.2},{40, 0.3},{60, 0.5}}}
 	Y := &HistogramFrac{[]HistoFrac{{30,0.3},{30,0.3},{50,0.3}}}
 	fmt.Println(X.JointProbaByEqualOrLess(Y))
+}
+
+func TestHistogram_CalFractionFromOffset(t *testing.T) {
+	q := []int{23,19,10,16,36,2,9,32,30,45}
+	his := NewHistogram(5)
+	fmt.Println(his)
+
+	for i := 0; i < len(q); i++ {
+		his.Update(float64(q[i]), 1)
+	}
+	fmt.Println(his)
+
+	fmt.Printf("Fraction from offset : \n")
+	fmt.Printf("offset = 0\n")
+	fmt.Println(his.SumFromNInf(0))
+	res := his.CalFractionFromOffset(0)
+	fmt.Println(res)
+
+	fmt.Printf("offset = 1\n")
+	fmt.Println(his.SumFromNInf(1))
+	res = his.CalFractionFromOffset(1)
+	fmt.Println(res)
+
+	fmt.Printf("offset = 2\n")
+	fmt.Println(his.SumFromNInf(2))
+	res = his.CalFractionFromOffset(2)
+	fmt.Println(res)
+
+	fmt.Printf("offset = 15\n")
+	fmt.Println(his.SumFromNInf(15))
+	res = his.CalFractionFromOffset(15)
+	fmt.Println(res)
+
+	fmt.Printf("offset = 45\n")
+	fmt.Println(his.SumFromNInf(45))
+	res = his.CalFractionFromOffset(45)
+	fmt.Println(res)
+
+	fmt.Printf("offset = 46\n")
+	fmt.Println(his.SumFromNInf(46))
+	res = his.CalFractionFromOffset(46)
+	fmt.Println(res)
 }

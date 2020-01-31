@@ -4,6 +4,7 @@ import (
 	"Histo/common"
 	"math"
 	"sort"
+	"sync"
 )
 
 type HistoPoint struct{
@@ -20,6 +21,7 @@ type Histogram struct {
 	maxNum int
 	//totalNum int
 	histo  [] HistoPoint
+	rwlock sync.RWMutex
 }
 
 //method of Histogram
@@ -37,20 +39,28 @@ func (histog *Histogram) GetHistoPoint() []HistoPoint {
 func NewCopyHistogram(maxPointNum int, histog *Histogram) *Histogram {
 	newhistog := new(Histogram)
 	newhistog.maxNum = maxPointNum
+	histog.rwlock.RLock()
 	newhistog.histo = make([]HistoPoint, len(histog.GetHistoPoint()))
 	copy(newhistog.histo, histog.GetHistoPoint())
+	histog.rwlock.RUnlock()
 	return newhistog
 }
 
 func (histog *Histogram) GetMaxNum() int {
+	histog.rwlock.RLock()
+	defer histog.rwlock.RUnlock()
 	return histog.maxNum
 }
 
 func (histog *Histogram) ResetMaxNum(newMaxNum int) {
+	histog.rwlock.Lock()
 	histog.maxNum = newMaxNum
+	histog.rwlock.Unlock()
 }
 
 func (histog *Histogram) Update(newValue float64, freq int) {
+	histog.rwlock.Lock()
+	defer histog.rwlock.Unlock()
 	for i, v := range histog.histo {
 		if common.IsValueEqual(v.Value, newValue) {
 			histog.histo[i].Freq += freq
@@ -60,6 +70,7 @@ func (histog *Histogram) Update(newValue float64, freq int) {
 	//add a new point
 	histog.histo = append(histog.histo, HistoPoint{newValue, freq})
 
+	//increase
 	sort.Slice(histog.histo, func(i,j int) bool {
 		return histog.histo[i].Value < histog.histo[j].Value
 	})
@@ -101,6 +112,7 @@ func (histog *Histogram) Merge(otherHistog *Histogram, maxNum int) {
 	if otherHistog == nil {
 		return
 	}
+
 	if maxNum > histog.maxNum {
 		histog.maxNum = maxNum
 	}
@@ -117,24 +129,27 @@ func (histog *Histogram) SumFromNInf(b float64)  float64 {
 	i := 0
 	for ; i < len(histog.histo) - 1; i++ {
 		if (histog.histo[i].Value < b || common.IsValueEqual(histog.histo[i].Value, b) ) && histog.histo[i+1].Value > b {
-			break;
+			break
 		}
 	}
+
 	sum := 0.0
+	for j:=0; j < i; j++ {
+		sum += float64(histog.histo[j].Freq)
+	}
 
 	if i >= len(histog.histo) - 1 {
-		for _, v := range histog.histo {
-			sum += float64(v.Freq)
+	    if histog.histo[i].Value < b { //b large than any value, add up all
+			sum += float64(histog.histo[i].Freq)
+		} else {
+			sum += float64(histog.histo[i].Freq)/2  // b equals the last value, add up half of it
 		}
 	} else {
-
-		for j:=0; j < i; j++ {
-			sum += float64(histog.histo[j].Freq)
-		}
 		sum += float64(histog.histo[i].Freq)/2
 		var Freqb float64 = float64(histog.histo[i].Freq) + float64(histog.histo[i+1].Freq - histog.histo[i].Freq)*(b - histog.histo[i].Value)/(histog.histo[i+1].Value - histog.histo[i].Value)
 		sum += (float64(histog.histo[i].Freq) + Freqb)*(b - histog.histo[i].Value)/float64(histog.histo[i+1].Value - histog.histo[i].Value)/2
 	}
+
 	return sum
 }
 
@@ -200,7 +215,8 @@ func NewHistogramFracWithLen(len int) *HistogramFrac{
 //shift the histogram to the right with [offset], then calculate the fraction of points
 //仅平移, 用于任务时间
 func (histog *Histogram) CalFractionAfterShifting(offset float64)  *HistogramFrac {
-
+	histog.rwlock.RLock()
+	defer histog.rwlock.RUnlock()
 	histogfrac := NewHistogramFracWithLen(len(histog.histo))
 
 	totalNum := 0;
@@ -216,54 +232,67 @@ func (histog *Histogram) CalFractionAfterShifting(offset float64)  *HistogramFra
 }
 
 //calculate the fraction from [offset]
-//按比例更改概率, 用于存在时间
+//按比例更改概率, 用于存在时间,
 func (histog *Histogram) CalFractionFromOffset(offset float64) *HistogramFrac{
 	if histog.histo == nil {
 		return nil
 	}
 
-	if len(histog.histo) == 0 {
+	if len(histog.histo) == 0 { //empty
 		return NewHistogramFrac()
 	}
 
+	histog.rwlock.RLock()
+	defer histog.rwlock.RUnlock()
+
 	if histog.histo[0].Value > offset {
-		return histog.CalFractionAfterShifting(-offset)
+		histog.rwlock.RUnlock()
+		res := histog.CalFractionAfterShifting(-offset)
+		histog.rwlock.RLock()
+		return res
 	}
 
 	histogfrac := NewHistogramFrac()
 
-	if histog.histo[len(histog.histo) -1].Value < offset {
+	if histog.histo[len(histog.histo) - 1].Value < offset {
 		return histogfrac
 	}
 
 	totalFreq := 0.0
-	pos := 0
+	for _, v := range histog.histo {
+		totalFreq += float64(v.Freq)
+	}
 
-	i := 0
-	for ; i < len(histog.histo); i++ {
-		totalFreq += float64(histog.histo[i].Freq)
-		if (histog.histo[i].Value < offset || common.IsValueEqual(histog.histo[i].Value, offset)) && histog.histo[i+1].Value > offset {
-			pos = i
+	pos := 0
+	for ; pos < len(histog.histo) - 1; pos++ {
+		if (histog.histo[pos].Value < offset || common.IsValueEqual(histog.histo[pos].Value, offset)) && histog.histo[pos + 1].Value > offset {
+			break
 		}
 	}
 
-	remainFreq := totalFreq - histog.SumFromNInf(offset)
-	if offset > histog.histo[pos].Value {
+	if pos == len(histog.histo) - 1  {
+		frac := HistoFrac{0, 1.0}
+		histogfrac.Frac = append(histogfrac.Frac, frac)
+	} else {
+		remainFreq := totalFreq - histog.SumFromNInf(offset)
+		if offset > histog.histo[pos].Value {
+			pos++
+			freq := float64(histog.histo[pos].Freq)/2 + histog.SumBetweenRange(offset, histog.histo[pos].Value)
+			frac := HistoFrac{histog.histo[pos].Value-offset, freq/remainFreq}
+			histogfrac.Frac = append(histogfrac.Frac, frac)
+		} else if common.IsValueEqual(histog.histo[pos].Value, offset) {
+			freq := float64(histog.histo[pos].Freq)/2
+			frac := HistoFrac{histog.histo[pos].Value-offset, freq/remainFreq}
+			histogfrac.Frac = append(histogfrac.Frac, frac)
+		}
 		pos++
-		freq := float64(histog.histo[pos].Freq)/2 + histog.SumBetweenRange(offset, histog.histo[pos].Value)
-		frac := HistoFrac{histog.histo[pos].Value-offset, freq/remainFreq}
-		histogfrac.Frac = append(histogfrac.Frac, frac)
-	} else if common.IsValueEqual(histog.histo[pos].Value, offset) {
-		freq := float64(histog.histo[pos].Freq)/2
-		frac := HistoFrac{histog.histo[pos].Value-offset, freq/remainFreq}
-		histogfrac.Frac = append(histogfrac.Frac, frac)
-	}
-	pos++
 
-	for i:=pos;i<len(histog.histo);i++ {
-		frac := HistoFrac{histog.histo[i].Value-offset,float64(histog.histo[i].Freq)/remainFreq}
-		histogfrac.Frac = append(histogfrac.Frac, frac)
+		for i:=pos;i<len(histog.histo);i++ {
+			frac := HistoFrac{histog.histo[i].Value-offset,float64(histog.histo[i].Freq)/remainFreq}
+			histogfrac.Frac = append(histogfrac.Frac, frac)
+		}
 	}
+
 	return histogfrac
 }
 
@@ -282,4 +311,24 @@ func (X *HistogramFrac) JointProbaByEqualOrLess( Y *HistogramFrac) (proba float6
 		}
 	}
 	return proba, extra
+}
+
+//P(start<=x<end)
+func (X *HistogramFrac) CalcProbabilityInRange(start float64, end float64) float64 {
+	if X.Frac == nil || len(X.Frac) == 0 {
+		return 0
+	}
+	if X.Frac[0].Value >= end {
+		return 0
+	}
+	if X.Frac[len(X.Frac)-1].Value < start {
+		return 0
+	}
+	sumFrac := 0.0
+	for _, v := range X.Frac {
+		if (v.Value > start || common.IsValueEqual(v.Value, start)) && v.Value < end {
+			sumFrac += v.Fraction
+		}
+	}
+	return  sumFrac
 }

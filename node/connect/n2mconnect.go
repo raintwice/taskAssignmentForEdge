@@ -49,6 +49,8 @@ func (no *Node) Join() {
     if(r.Reply) {
         log.Printf("Node(%s:%d) Successed to join", no.Saddr, no.Sport)
         no.isOnline = true
+        //boot up task pool
+        no.StartPool(no.PoolCap)
     } else {
         log.Printf("Node(%s:%d) Failed to join", no.Saddr, no.Sport)
     }
@@ -69,6 +71,7 @@ func (no *Node) Exit() {
 	if(r.Reply) {
 		log.Printf("Successed to exit")
 		no.isOnline = false
+		no.StopPool()
 	} else {
 		log.Printf("Failed to exit")
 	}
@@ -98,9 +101,10 @@ func (no *Node) SendHeartbeat()  {
 	c := pb.NewNode2MasterConnClient(no.conn)
 	req := &pb.HeartbeatRequest{IpAddr: no.Saddr, Port:int32(no.Sport)}
 	req.AvgExecTime = no.AvgExecTime
-	no.curTaskRwLock.RLock()
+	/*no.curTaskRwLock.RLock()
 	queueLen := no.CurTaskNum
-	no.curTaskRwLock.RUnlock()
+	no.curTaskRwLock.RUnlock()*/
+	queueLen := no.pool.GetJobsCnt()
 	if queueLen <= no.PoolCap {
 		req.WaitQueueLen = 0
 	} else {

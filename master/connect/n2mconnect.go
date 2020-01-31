@@ -42,6 +42,10 @@ func (ms *Master) InitNodeConn(node *nodemgt.NodeEntity ) error {
 	return nil
 }
 
+func (ms *Master) CloseNodeConn(node *nodemgt.NodeEntity) {
+	node.Conn.Close()
+}
+
 func (ms *Master) InitPredictorForNode(no *nodemgt.NodeEntity) {
 	if no == nil {
 		return
@@ -114,6 +118,7 @@ func (ms *Master) ExitGroup(ctx context.Context, in *pb.ExitRequest) (*pb.ExitRe
 		exitTST := time.Now().UnixNano()/1e3
 		node.ConnPredict.Update(exitTST - node.JoinTST)
 		lastedSecs := (exitTST - node.JoinTST)/1e6  //
+		defer ms.CloseNodeConn(node)
 		log.Printf("Node(%s:%d) has left from the group actively, and lasted for %d mins %d secs", in.IpAddr, in.Port, lastedSecs/60, lastedSecs%60)
 		return &pb.ExitReply{Reply: true}, nil
 	} else {
@@ -134,9 +139,9 @@ func (ms *Master) Heartbeat(ctx context.Context, in *pb.HeartbeatRequest) (*pb.H
 		node.AvgWaitTime = in.AvgExecTime
 		node.WaitQueueLen = int(in.WaitQueueLen)
 		node.HeartbeatSendCnt++
-		if node.HeartbeatSendCnt%10 == 0 { //20s
+		/*if node.HeartbeatSendCnt%10 == 0 { //20s
 			log.Printf("Node(%s:%d) remains %d tasks in waiting queue with average execute time %d", node.NodeId.IP, node.NodeId.Port, node.WaitQueueLen, node.AvgWaitTime)
-		}
+		}*/
 		return &pb.HeartbeatReply{Reply:true}, nil
 	}
 }

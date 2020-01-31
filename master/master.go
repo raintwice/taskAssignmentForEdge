@@ -5,22 +5,25 @@ import (
     "fmt"
     "os"
     "sync"
-   	"taskAssignmentForEdge/master/connect"
+    "taskAssignmentForEdge/common"
+    "taskAssignmentForEdge/master/connect"
     "taskAssignmentForEdge/master/dispatch"
 )
 
 var (
     h bool
-    dptindex int
+    dptIndex int
+    interval int
 )
 
 func init() {
     flag.BoolVar(&h, "h", false, "print help information")
-    flag.IntVar(&dptindex, "dispatcher", dispatch.Dispatcher_RR, "set the dispatcher")
+    flag.IntVar(&dptIndex, "dispatcher", dispatch.Dispatcher_RR, "set the dispatcher")
+    flag.IntVar(&interval, "interval", common.AssignInterval, "set the interval of dispatcher in ms")
 }
 
 func usage() {
-    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dipatcher index_of_dispatcher] 
+    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dipatcher index_of_dispatcher] [-interval interval_of_dispatcher]
 Options:
 `)
     flag.PrintDefaults()
@@ -35,13 +38,12 @@ func main() {
     }
 
     ms := connect.NewMaster()
-    ms.Init(dptindex)
+    ms.Init(dptIndex, interval)
     var wg sync.WaitGroup
     wg.Add(1)
     go ms.StartGrpcServer(&wg)
     wg.Add(1)
     go ms.StartHeartbeatChecker(&wg)
-    //taskmgt.ReadTaskList("tasklist.json")
     wg.Add(1)
     go ms.StartDispatcher(&wg)
     wg.Add(1)

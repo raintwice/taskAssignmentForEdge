@@ -68,13 +68,15 @@ func main(){
 	node.InitConnection()
 	//node.Join()
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go node.StartNetworkManager(&wg)
+	if pscTimeSig == 0 {
+		node.Join()
+	} else {
+		wg.Add(1)
+		go node.StartNetworkManager(&wg)
+	}
     wg.Add(1)
 	go node.StartHeartbeatSender(&wg)
 	wg.Add(1)
 	go node.StartRecvServer(&wg)
-	wg.Add(1)
-	go node.StartPool(poolCap, &wg)
     wg.Wait()
 }

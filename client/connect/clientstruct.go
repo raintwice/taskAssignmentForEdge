@@ -2,6 +2,7 @@ package connect
 
 import (
 	"google.golang.org/grpc"
+	"sync"
 	"taskAssignmentForEdge/taskmgt"
 )
 /*
@@ -31,8 +32,10 @@ type Client struct {
 
 //attribute for receiving
 	recvPretrainTaskCnt 	int
+	recvPreLock sync.Mutex
 	PreTrainTaskInfoGrp   [][]string
 	recvEvalTaskCnt     int
+	recvEvalLock sync.Mutex
 	EvalTaskInfoGrp       [][]string
 
 	conn *grpc.ClientConn  //call master

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/histogram"
 	"taskAssignmentForEdge/taskmgt"
@@ -54,6 +55,8 @@ type PredictUnit struct {
 	minv float64
 
 	totalRecordNum int
+
+	rwlock sync.RWMutex
 }
 
 func NewPredictUnit(fpair FeaturePair) *PredictUnit {
@@ -66,6 +69,9 @@ func NewPredictUnit(fpair FeaturePair) *PredictUnit {
 }
 
 func (preUnit *PredictUnit) Update(val int64) {
+
+	preUnit.rwlock.Lock()
+	defer preUnit.rwlock.Unlock()
 
 	valf := float64(val)
 
@@ -148,6 +154,9 @@ type PredictResult struct {
 }
 
 func (preUnit *PredictUnit) Predict() PredictResult {
+	preUnit.rwlock.RLock()
+	defer preUnit.rwlock.RUnlock()
+
 	diff := 0.0
 	if common.IsValueEqual(preUnit.minv, preUnit.maxv) {
 		diff = 0.0000001
@@ -161,6 +170,34 @@ func (preUnit *PredictUnit) Predict() PredictResult {
 	return PredictResult{preUnit.Feature, result}
 }
 
+//used for default feature
+func (preUnit *PredictUnit) SinglePredict() (estimate float64) {
+	preUnit.rwlock.RLock()
+	defer preUnit.rwlock.RUnlock()
+
+	diff := 0.0
+	if common.IsValueEqual(preUnit.minv, preUnit.maxv) {
+		diff = 0.0000001
+	} else {
+		diff = preUnit.maxv - preUnit.minv
+	}
+
+	result := []EstimatorResult{{preUnit.avg, preUnit.maeofavg/diff},{preUnit.median, preUnit.maeofmedian/diff},
+		{preUnit.ewma, preUnit.maeofewma/diff},{preUnit.recentAvg, preUnit.maeofrecentAvg/diff}}
+
+	//find the minimum
+	minnmae := result[0].nmae
+	estimate = result[0].estimate
+	for i:=1; i < len(result); i++ {
+		if result[i].nmae < minnmae {
+			minnmae = result[i].nmae
+			estimate = result[i].estimate
+		}
+	}
+
+	return estimate
+}
+
 func CreateFeaturePairs(task *taskmgt.TaskEntity) []FeaturePair{
 	if task == nil {
 		return nil
@@ -172,6 +209,7 @@ func CreateFeaturePairs(task *taskmgt.TaskEntity) []FeaturePair{
 }
 
 //For waitint time, without histogram
+/*
 type PredictUnitSimple struct {
 	//estimators
 	recentQueue []float64
@@ -186,7 +224,7 @@ type PredictUnitSimple struct {
 	maeofrecentAvg float64
 
 	totalRecordNum int
-}
+}*/
 
 /*
 func NewPredictUnitSimple() *PredictUnitSimple {

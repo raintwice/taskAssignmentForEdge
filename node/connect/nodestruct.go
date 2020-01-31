@@ -2,7 +2,7 @@ package connect
 
 import (
 	"google.golang.org/grpc"
-	"sync"
+	"log"
 	"taskAssignmentForEdge/taskmgt"
 )
 
@@ -33,9 +33,12 @@ type Node struct {
 
 	PoolCap int //worker数量
 	AvgExecTime int64  //平均任务执行时间
+	FinishTaskCnt int
+
+	/*
 	CurTaskNum int  //队列长度即当前任务总数，等待队列长度= CurTaskNum - PoolCap if CurTaskNum < PoolCap else 0
 	curTaskRwLock  sync.RWMutex//
-	FinishTaskCnt int
+	*/
 }
 
 func NewNode(addr string, port int, sport int) (* Node) {
@@ -61,8 +64,29 @@ func (no *Node) SetNetworkPara(groupIndex int, pscTimeAvg int, pscTimeSig int, a
 	no.Avl = avl
 }
 
+/*
 func  (no *Node) StartPool(cap int, wg *sync.WaitGroup) {
 	no.pool = taskmgt.NewPool(cap)
 	no.pool.Run()
 	wg.Done()
+}*/
+
+func  (no *Node) StartPool(cap int) {
+	no.pool = taskmgt.NewPool(cap)
+	go no.pool.SafeRun()
+}
+
+func  (no *Node) StopPool() {
+	if no.pool != nil {
+		no.pool.SafeStop()
+		no.pool = nil
+	}
+}
+
+func (no *Node) SubmitTask(task *taskmgt.TaskEntity) {
+	if no.pool != nil {
+		no.pool.SafeSubmit(task)
+	} else {
+		log.Printf("Fatal:Task Pool is not booted up now in Node(%s:%d)", no.Saddr, no.Sport)
+	}
 }

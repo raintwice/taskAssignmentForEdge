@@ -157,6 +157,10 @@ func (clt *Client) ProduceTasks() {
 	/*
 	for ;clt.EvaluationStatus < EvaluationStatus_Finish ; {
 		time.Sleep(3*time.Second)
+	}
+
+	if clt.EvaluationStatus ==  EvaluationStatus_Finish {
+		os.Exit(0)
 	}*/
 }
 

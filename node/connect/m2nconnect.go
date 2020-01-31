@@ -18,7 +18,7 @@ import (
 func (no *Node) StartRecvServer(wg *sync.WaitGroup) {
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(no.Sport))
 	if err != nil {
-		log.Fatal("Failed to start receiver server: %v", err)
+		log.Fatalf("Failed to start receiver server: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterMaster2NodeConnServer(s, no)
@@ -75,7 +75,8 @@ END:
 	//no.Tq.AddTask(newTask)
 	//提交该任务至任务队列
 	newTask.SetTaskCallback(TaskFinishedHandler, no, newTask)
-	go no.pool.Submit(newTask)
+	//go no.pool.Submit(newTask)
+	no.SubmitTask(newTask)
 
 	return err
 }
@@ -85,11 +86,14 @@ func (no *Node) TaskRecvHandler(task *taskmgt.TaskEntity) {
 	task.Status = taskmgt.TaskStatusCode_WaitForExec
 	//setup callback
 	task.SetTaskCallback(TaskFinishedHandler, no, task)
+
+	/*
 	//提交任务，队列长度加一
 	no.curTaskRwLock.Lock()
 	no.CurTaskNum++
-	no.curTaskRwLock.Unlock()
-	no.pool.Submit(task)
+	no.curTaskRwLock.Unlock()*/
+	//no.pool.Submit(task)
+	no.SubmitTask(task)
 }
 
 func TaskFinishedHandler(no *Node, task *taskmgt.TaskEntity){
@@ -97,10 +101,13 @@ func TaskFinishedHandler(no *Node, task *taskmgt.TaskEntity){
 		return
 	}
 	log.Printf("Succeed to excute task(Id:%d) in Node(%s:%d)", task.TaskId, no.Saddr, no.Sport)
+
+	/*
 	//任务执行完毕，队列长度减一
 	no.curTaskRwLock.Lock()
 	no.CurTaskNum--
 	no.curTaskRwLock.Unlock()
+	*/
 
 	const Decay_Weight = 0.5
 

@@ -148,7 +148,7 @@ func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 				task.Status = taskmgt.TaskStatusCode_TransmitFailed
 			} else {
 				if status.Code != pb.SendStatusCode_Ok {
-					log.Printf("Error: Cannot assign tasks to Node(%s:%d), %v", node.NodeId.IP, node.NodeId.Port, err)
+					log.Printf("Error: Cannot assign tasks to Node(%s:%d), %s", node.NodeId.IP, node.NodeId.Port, "status code is not ok")
 					task.Status = taskmgt.TaskStatusCode_TransmitFailed
 				} else {
 					task.Status = taskmgt.TaskStatusCode_TransmitSucess
@@ -223,10 +223,11 @@ func (ms *Master) AssignTaskForNode(node *nodemgt.NodeEntity) {
 }
 
 func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
-	for range time.Tick(time.Millisecond*common.AssgnTimeout) {
-		//isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
-		isNeedAssign := false
+	for range time.Tick(time.Millisecond*common.AssignInterval) {
+		isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
 
+		/*
+		isNeedAssign := false
 		if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
 			isNeedAssign = ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
 		} else{
@@ -235,7 +236,7 @@ func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 			if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
 				log.Printf("Change to the closen algorithm")
 			}
-		}
+		}*/
 
 		if isNeedAssign == false {
 			continue

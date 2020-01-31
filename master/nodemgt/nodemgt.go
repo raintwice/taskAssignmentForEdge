@@ -133,6 +133,17 @@ func (nq *NodeQueue) GetQueueNodeNum() (len int) {
 	return
 }
 
+func (nq *NodeQueue) GetAllNodesWithoutLock() (nodes []*NodeEntity) {
+	if nq.NodeList.Len() == 0 {
+		return nil
+	}
+	for e := nq.NodeList.Front(); e != nil; e = e.Next(){
+		node := e.Value.(*NodeEntity)
+		nodes = append(nodes, node)
+	}
+	return nodes
+}
+
 //Returns the nodes to be deleted
 func (nq *NodeQueue) CheckNode()   (toDeleteNodes []*NodeEntity) {
 	//log.Println("Running CheckNode")

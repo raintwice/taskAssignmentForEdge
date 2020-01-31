@@ -8,7 +8,7 @@ const (
 	ClientPort = 50054 //client端口
 
 	Timeout = 2000   //心跳间隔（毫秒）
-	AssgnTimeout = 1000 //调度器工作间隔（毫秒）
+	AssignInterval = 1000 //调度器工作间隔（毫秒）
 	)
 
 type NodeIdentity struct {

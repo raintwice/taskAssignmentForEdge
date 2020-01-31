@@ -30,8 +30,10 @@ func (clt *Client) StartRecvResultServer(wg *sync.WaitGroup) {
 func (clt *Client) ReturnSubmittedTasks(ctx context.Context, in *pb.TaskSubmitResReq) (*pb.TaskSubmitResResp, error) {
 	//update attribute
 	if  clt.EvaluationStatus == EvaluationStatus_Pretrain {
+		clt.recvPreLock.Lock()
+		defer clt.recvPreLock.Unlock()
 		for i := 0; i < len(in.InfoGp); i++ {
-			log.Printf("Get result of task(Id:%d) from master", in.InfoGp[i].TaskId)
+			log.Printf("Get result of pretrain task(Id:%d, cnt:%d) from master", in.InfoGp[i].TaskId, clt.recvPretrainTaskCnt)
 			taskmgt.TranslateProtoTaskToRecord(in.InfoGp[i],clt.PreTrainTaskInfoGrp[clt.recvPretrainTaskCnt])
 			clt.recvPretrainTaskCnt++
 		}
@@ -51,13 +53,14 @@ func (clt *Client) ReturnSubmittedTasks(ctx context.Context, in *pb.TaskSubmitRe
 			}
 		}
 	} else if clt.EvaluationStatus == EvaluationStatus_Evaluation {
+		clt.recvEvalLock.Lock()
+		defer clt.recvEvalLock.Unlock()
 		for i := 0; i < len(in.InfoGp);i++ {
-			log.Printf("Get result of task(Id:%d) from master", in.InfoGp[i].TaskId)
+			log.Printf("Get result of evaluation task(Id:%d,cnt:%d) from master", in.InfoGp[i].TaskId, clt.recvEvalTaskCnt)
 			taskmgt.TranslateProtoTaskToRecord(in.InfoGp[i], clt.EvalTaskInfoGrp[clt.recvEvalTaskCnt])
 			clt.recvEvalTaskCnt++
 		}
 		if clt.recvEvalTaskCnt >=  clt.EvalSamplesNum {
-			clt.EvaluationStatus = EvaluationStatus_Finish
 			//save the file
 			newfile, err := os.Create("./EvalTaskResult.csv")
 			if err != nil {
@@ -69,6 +72,8 @@ func (clt *Client) ReturnSubmittedTasks(ctx context.Context, in *pb.TaskSubmitRe
 					log.Printf("Error: cannot write to EvalTaskResult.csv")
 				} else {
 					log.Printf("Success!Evaluation is finished")
+					clt.EvaluationStatus = EvaluationStatus_Finish
+					os.Exit(0)
 				}
 			}
 		}

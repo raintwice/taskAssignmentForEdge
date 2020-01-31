@@ -19,9 +19,9 @@ var (
 func init() {
 	flag.BoolVar(&h, "h", false, "print help information")
 	flag.StringVar(&evalDir, "dir", "Evalutionfiles", "set the directory of task files")
-	flag.Float64Var(&arrvialRate, "rate", 150, "set the job arrival rate")
-	flag.IntVar(&pretrainNum, "ptrainNum", 9000, "set the num of tasks used to pretrain tasks")
-	flag.IntVar(&evalNum, "evalNum", 27000, "set the num of tasks used to evaluate ")
+	flag.Float64Var(&arrvialRate, "rate", 120, "set the job arrival rate")
+	flag.IntVar(&pretrainNum, "ptrainNum", 5000, "set the num of tasks used to pretrain tasks")
+	flag.IntVar(&evalNum, "evalNum", 20000, "set the num of tasks used to evaluate ")
 }
 
 func usage() {
