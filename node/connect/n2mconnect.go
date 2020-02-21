@@ -82,14 +82,17 @@ func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
 	rand.Seed(time.Now().UnixNano())
 	time.Sleep(time.Duration(no.StartJoinTime)*time.Second)
 	no.Join()
+	fmt.Println(time.Now().String())
 	interval := time.Duration(float64(time.Duration(no.PscTimeAvg)*time.Minute)*(1-no.Avl)/no.Avl)
 	for {
 		pscTimeInSec := rand.NormFloat64()*float64(no.PscTimeSigma) + float64(no.PscTimeAvg*60)
 		pscTime := time.Duration(pscTimeInSec*float64(time.Second))
 		time.Sleep(pscTime)
 		no.Exit()
+		fmt.Println(time.Now().String())
 		time.Sleep(interval)
 		no.Join()
+		fmt.Println(time.Now().String())
 	}
 	wg.Done()
 }

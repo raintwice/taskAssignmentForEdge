@@ -91,6 +91,7 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 		task.NodeId.Port = 0
 		task.Status = taskmgt.TaskStatusCode_TransmitFailed
 		if task.RunCnt >= taskmgt.TaskMaxRunCnt {
+			task.FinishTST = time.Now().UnixNano()/1e3
 			ms.ReturnOneTaskToClient(task)
 			log.Printf("Discard and return task(Id:%d) due to exiting of Node(%s:%d) and reaching maxinum run times(%d)", node.NodeId.IP, node.NodeId.Port, task.RunCnt)
 		} else {

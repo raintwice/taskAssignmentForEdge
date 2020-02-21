@@ -19,10 +19,12 @@ const (
 	Dispatcher_STT_Greedy  //shortest total time, greedy
 	Dispatcher_STT_Genetic	//shortest total time, genetic algorithm
 	Dispatcher_SCT_RC       //FemtoClouds risk-controlled
+	Dispatcher_SCT_Genetic_ExtraWait //shortest complete time with extra queueing time by the same node, genetic algorithm
+	Dispatcher_STT_Genetic_ExtraWait //shortest total time with extra queueing time by the same node, genetic algorithm
 )
 
 var DispatcherList = []string {"Dispatcher_RR", "Dispatcher_SCT_Greedy","Dispatcher_SCT_Genetic",
-	"Dispatcher_STT_Greedy", "Dispatcher_STT_Genetic"}
+	"Dispatcher_STT_Greedy", "Dispatcher_STT_Genetic", "Dispatcher_SCT_EW_Genetic","Dispatcher_STT_EW_Genetic" }
 
 type Dispatcher interface {
 	//EnqueueTask(tq *taskmgt.TaskQueue, task *taskmgt.TaskEntity )
@@ -52,6 +54,10 @@ func NewDispatcher(index int)  Dispatcher{
 		return NewSttGADispatcher()
 	case Dispatcher_SCT_RC:
 		return  NewRcDispatcher()
+	case Dispatcher_SCT_Genetic_ExtraWait:
+		return NewSctBetterGADispatcher()
+	case Dispatcher_STT_Genetic_ExtraWait:
+		return NewSttBetterGADispatcher()
 	default:
 		return nil
 	}
@@ -81,6 +87,13 @@ func GetPredictWaitTime(node *nodemgt.NodeEntity) int64 {
 		return 0
 	}
 	return int64(float64(node.WaitQueueLen)*node.RunTimePredict.GetDefaultUnit().SinglePredict())
+}
+
+func GetPredictAvgExecTime(node *nodemgt.NodeEntity) int64 {
+	if node == nil {
+		return 0
+	}
+	return int64(node.RunTimePredict.GetDefaultUnit().SinglePredict())
 }
 
 func GetPredictExecTime(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) int64 {
@@ -307,6 +320,100 @@ func GaAlgorithm2(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iter
 	return bestChromo
 }
 
+//
+func GaAlgorithmBetter(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iteratorNum int, chromosomeNum int, isAddExtra bool) []int {
+	fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
+	generation := createInitGeneration(len(tasks), len(nodes), chromosomeNum)
+	/*
+		fmt.Printf("First Generation:\n")
+		PrintGeneration(generation)*/
+	fitnessList := calFitnessListBetter(generation, tasks, nodes, isAddExtra)
+	bestChromo, bestFitness := getMaxChromosome(generation, fitnessList)
+	lastBestFitness := bestFitness
+	slightDiffcnt := 0
+	//fitnesshistory := make([]float64, IteratorNum)
+
+	rand.Seed(time.Now().UnixNano())
+
+	iterCnt := 0
+	for ; iterCnt < iteratorNum ; iterCnt++ {
+
+		//select
+		//fitnessList = calFitness(generation, tasks, nodes, isAddExtra)
+		chosenGeneration := selectChromosome(generation, fitnessList)
+
+		//create new generation
+		fitnessList = calFitnessListBetter(chosenGeneration, tasks, nodes, isAddExtra)
+
+		//first, copy part of max N old generation to be new generation
+		copyNum := (int)(CpRate*float64(chromosomeNum))
+		generation = getMaxNChromosome(chosenGeneration, fitnessList, copyNum)
+
+		//second, create the rest part of new generation by cross and mutation
+		childGeneration := crossAndMutation(chosenGeneration, fitnessList, chromosomeNum - copyNum, len(tasks), len(nodes))
+		generation = append(generation, childGeneration...)
+
+		fitnessList = calFitnessListBetter(generation, tasks, nodes, isAddExtra)
+		curBestchromo, curBestFitness := getMaxChromosome(generation, fitnessList)
+
+		//check
+		/*
+			fmt.Printf("Generation %d:\n", i)
+			PrintGeneration(generation)
+			checkFitness, checkTime := TestChromosome(curBestchromo, tasks, nodes, isAddExtra)
+			fmt.Printf("current best chromosome, totalTime %d, curfitness %.10f :", checkTime, checkFitness)
+			PrintChromosome(curBestchromo)*/
+		/*
+			for cnt := 0; cnt < len(curBestchromo); cnt ++ {
+				task := tasks[cnt]
+				node := nodes[curBestchromo[cnt]]
+				predTransTime, predWaitTime, predExecTime, predExtraTime := GetAllPredictTimes(task, node)
+				fmt.Printf("trans:%d, wait:%d, exec:%d, extra:%d, size:%f, bw:%f\n", predTransTime, predWaitTime, predExecTime, predExtraTime, task.DataSize, node.Bandwidth)
+			}
+		*/
+		/*
+			fmt.Printf("last best chromosome, lastBestFitness %.10f :", bestFitness)
+			PrintChromosome(bestChromo)*/
+		/*
+			for cnt := 0; cnt < len(curBestchromo); cnt ++ {
+				task := tasks[cnt]
+				node := nodes[bestChromo[cnt]]
+				predTransTime, predWaitTime, predExecTime, predExtraTime := GetAllPredictTimes(task, node)
+				fmt.Printf("trans:%d, wait:%d, exec:%d, extra:%d, size:%f, bw:%f\n", predTransTime, predWaitTime, predExecTime, predExtraTime, task.DataSize, node.Bandwidth)
+			}
+		*/
+		//end check
+		lastBestFitness = bestFitness
+		if curBestFitness > bestFitness {
+			bestFitness = curBestFitness
+			bestChromo = curBestchromo
+		}
+
+		if bestFitness - lastBestFitness < FitnessDelta {
+			slightDiffcnt ++
+			if slightDiffcnt >= ContinuousDiffCnt {
+				break
+			}
+		} else {
+			slightDiffcnt = 0
+		}
+
+		//fitnesshistory[iterCnt] = bestFitness
+	}
+
+	/*
+		fmt.Printf("trainning history: ")
+		for j := 0;j < iterCnt-29;j++ {
+			fmt.Printf("%.10f ", fitnesshistory[j])
+			if j%10 == 0 {
+				fmt.Printf("\n")
+			}
+		}*/
+
+	//fmt.Printf("Total iteration:%d\n", iterCnt)
+	return bestChromo
+}
+
 func createInitGeneration(taskNum int, nodeNum int, chromosomeNum int) [][]int{
 	generation := make([][]int, chromosomeNum)
 	for i := 0; i < chromosomeNum; i++ {
@@ -334,6 +441,41 @@ func calFitnessList(generation [][]int, tasks []*taskmgt.TaskEntity, nodes []*no
 		chromosome := generation[i]
 		for j := 0; j < len(chromosome) ;j++ {
 			totalTime += GetTotalTime(tasks[j], nodes[chromosome[j]], isAddExtra)
+		}
+
+		fitnessList[i] = Fitness(totalTime)
+	}
+	return fitnessList
+}
+
+//add up extra queueing time
+func calFitnessListBetter(generation [][]int, tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, isAddExtra bool) []float64 {
+	if generation == nil || tasks == nil || nodes == nil {
+		return  nil
+	}
+	fitnessList := make([]float64, len(generation))
+	for i := 0; i < len(fitnessList); i++ {
+		var totalTime int64 = 0
+		chromosome := generation[i]
+		//fmt.Println(chromosome)
+		for j := 0; j < len(chromosome) ;j++ {
+			totalTime += GetTotalTime(tasks[j], nodes[chromosome[j]], isAddExtra)
+		}
+		//add up extra queueing time caused by the same node
+		if len(chromosome) > 1 {
+			nodeCntmap := make(map[int]int)
+			for _, v := range chromosome {
+				nodeCntmap[v]++
+			}
+			for key, value := range nodeCntmap {
+				//fmt.Printf("key:%d, value:%d\n", key, value)
+				node := nodes[key]
+				if value > 1 {
+					extraWaitTime := int64(value-1) * GetPredictAvgExecTime(node)
+					totalTime += extraWaitTime
+					//fmt.Printf("extra wait time (%d) by the same node(%s:%d, cnt:%d)\n", extraWaitTime, node.NodeId.IP, node.NodeId.Port, value)
+				}
+			}
 		}
 
 		fitnessList[i] = Fitness(totalTime)

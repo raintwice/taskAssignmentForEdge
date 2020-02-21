@@ -126,3 +126,37 @@ func ( dp *SctGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *node
     nq.Rwlock.Unlock()
     return true
 }
+
+//SCT_GA_Better
+type SctBetterGADispatcher struct {
+
+}
+
+func NewSctBetterGADispatcher() (*SctBetterGADispatcher) {
+    return &SctBetterGADispatcher{
+    }
+}
+
+func ( dp *SctBetterGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) bool {
+    if tq == nil || nq == nil || tq.GettaskNum() == 0 || nq.GetQueueNodeNum() == 0 {
+        return false
+    }
+
+    nq.Rwlock.Lock()
+
+    tasks := tq.DequeueAllTasks()   //调度队列弹出所有任务
+    nodes := nq.GetAllNodesWithoutLock() //节点队列列出所有节点，未出队
+
+    bestChromo := GaAlgorithmBetter(tasks, nodes, IteratorNum, ChromosomeNum, false)
+
+    for i := 0; i < len(tasks); i++ {
+        task := tasks[i]
+        node := nodes[bestChromo[i]]
+        predTransTime, predWaitTime, predExecTime := GetUsualPredictTimes(task, node)
+        task.UpdateTaskPrediction(predTransTime, predWaitTime, predExecTime, 0)
+        AssignTaskToNode(task, node)
+    }
+
+    nq.Rwlock.Unlock()
+    return true
+}
