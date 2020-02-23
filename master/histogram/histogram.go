@@ -1,7 +1,7 @@
 package histogram
 
 import (
-	"Histo/common"
+	"taskAssignmentForEdge/common"
 	"math"
 	"sort"
 	"sync"

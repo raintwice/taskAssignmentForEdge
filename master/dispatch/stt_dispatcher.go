@@ -133,3 +133,40 @@ func ( dp *SttBetterGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq
     nq.Rwlock.Unlock()
     return true
 }
+
+//STT_GA_Better
+type SttKGADispatcher struct {
+
+}
+
+func NewSttKGADispatcher() (*SttKGADispatcher) {
+    return &SttKGADispatcher{
+    }
+}
+func ( dp *SttKGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nodemgt.NodeQueue) bool {
+    if tq == nil || nq == nil || tq.GettaskNum() == 0 || nq.GetQueueNodeNum() == 0 {
+        return false
+    }
+
+    nq.Rwlock.Lock()
+
+    // gaStartTST := time.Now().UnixNano()
+
+    tasks := tq.DequeueAllTasks()   //调度队列弹出所有任务
+    nodes := nq.GetAllNodesWithoutLock() //节点队列列出所有节点，未出队
+    bestChromo := GaAlgorithmGeneral(tasks, nodes, IteratorNum, ChromosomeNum, ExtraTime_K, calFitnessListGeneral)
+
+    for i := 0; i < len(tasks); i++ {
+        task := tasks[i]
+        node := nodes[bestChromo[i]]
+        predTransTime, predWaitTime, predExecTime, predExtraTime := GetAllPredictTimes(task, node)
+        task.UpdateTaskPrediction(predTransTime, predWaitTime, predExecTime, predExtraTime)
+        AssignTaskToNode(task, node)
+    }
+
+    // gaUsedTime := time.Now().UnixNano() - gaStartTST
+    // log.Printf("STT GA algorithm use %d us", gaUsedTime/1e3)
+
+    nq.Rwlock.Unlock()
+    return true
+}

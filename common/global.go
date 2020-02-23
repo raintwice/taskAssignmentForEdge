@@ -19,6 +19,7 @@ type NodeIdentity struct {
 //indicate the nodes with the same hardware and software configuration
 const (
 	MachineType_Simualted = iota
+	MachineType_Simualted_Fast
 	MachineType_RaspPi_3B
 	MachineType_RaspPi_4B
 	MachineType_Surface_M3
@@ -27,6 +28,19 @@ const (
 //indicate the nodes with same network environment and mobility
 const (
 	GroupIndex_Simulated = iota
+	GroupIndex_Simulated_Fast
 )
 
-const PreDispatch_RR_Cnt = 5*50
+const PreDispatch_RR_Cnt = 1500
+
+//
+const (
+	Node_Mode_Repeat = iota
+	Node_Mode_Once
+)
+
+//capacity
+const (
+	Node_Capacity_Normal = 1.0
+	Node_Capacity_Fast = 1.5
+)

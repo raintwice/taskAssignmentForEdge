@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"sync"
 	"taskAssignmentForEdge/common"
@@ -89,6 +90,9 @@ func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
 		pscTime := time.Duration(pscTimeInSec*float64(time.Second))
 		time.Sleep(pscTime)
 		no.Exit()
+		if no.NodeMode == common.Node_Mode_Once {
+			os.Exit(0)
+		}
 		fmt.Println(time.Now().String())
 		time.Sleep(interval)
 		no.Join()

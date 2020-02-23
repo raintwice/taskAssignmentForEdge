@@ -224,9 +224,6 @@ func (ms *Master) AssignTaskForNode(node *nodemgt.NodeEntity) {
 
 func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 	for range time.Tick(time.Millisecond*common.AssignInterval) {
-		isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
-
-		/*
 		isNeedAssign := false
 		if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
 			isNeedAssign = ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
@@ -234,10 +231,10 @@ func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 			ms.preDispatchCnt += ms.Tq.GettaskNum()
 			isNeedAssign = ms.defaultDispachter.MakeDispatchDecision(ms.Tq, ms.Nq)
 			if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
-				log.Printf("Change to the closen algorithm")
+				log.Printf("Change to the chosen algorithm")
 			}
-		}*/
-
+		}
+		//isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
 		if isNeedAssign == false {
 			continue
 		}

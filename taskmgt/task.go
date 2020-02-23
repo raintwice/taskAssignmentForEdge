@@ -82,6 +82,7 @@ type TaskEntity struct {
 	//其他属性
 	//sync.RWMutex
 	IsAborted bool  //表示模拟传输过程被中断
+	NodeCapa float64
 }
 
 //创建任务
@@ -147,7 +148,7 @@ func (t *TaskEntity) Execute() error {
 func (t *TaskEntity) RunSimulation() error {
 	t.ExecTST = time.Now().UnixNano()/1e3
 	t.Status = TaskStatusCode_Running
-	time.Sleep(time.Duration(t.RuntimePreSet)*time.Microsecond)
+	time.Sleep(time.Duration(float64(t.RuntimePreSet)/t.NodeCapa)*time.Microsecond)
 	t.FinishTST = time.Now().UnixNano()/1e3
 	t.Status = TaskStatusCode_Success
 	if t.callback != nil {

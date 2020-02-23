@@ -14,10 +14,12 @@ type Node struct {
 
 	isOnline bool
 	StartJoinTime int //duration to join after booted up
+	NodeMode int
 
 	MachineType int
 	GroudIndex  int   //indicate one group with certain network environment
 	BandWidth float64   //Unit: Mbps
+	Capacity float64
 
 	// the PstTime with the same group index should be the same
 	PscTimeAvg int   //expectation of presence time in minutes
@@ -50,11 +52,12 @@ func NewNode(addr string, port int, sport int) (* Node) {
 	}
 }
 
-func (no *Node) SetNodePara(bandWidth float64, machineType int, startTime int, poolCap int){
+func (no *Node) SetNodePara(bandWidth float64, machineType int, startTime int, poolCap int, nodeMode int){
 	no.BandWidth = bandWidth
 	no.MachineType = machineType
 	no.StartJoinTime = startTime
 	no.PoolCap = poolCap
+	no.NodeMode = nodeMode
 }
 
 func (no *Node) SetNetworkPara(groupIndex int, pscTimeAvg int, pscTimeSig int, avl float64) {

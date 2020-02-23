@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"taskAssignmentForEdge/common"
 
 	//"log"
@@ -28,6 +29,8 @@ var (
 	pscTimeSig int
 	avl float64
 	startTime int
+	nodeMode int
+	capa float64
 )
 
 func init() {
@@ -43,11 +46,14 @@ func init() {
 	flag.IntVar(&pscTimeAvg, "pscTimeAvg", 15, "set the average of presence time of the edge node(in minutes) ")
 	flag.IntVar(&pscTimeSig, "pscTimeSig", 15*60*0.1, "set the standard deviation of presence time of the edge node(in seconds) ")
 	flag.Float64Var(&avl, "avl", 0.80, "set the availability of the edge node(in minutes) ")
+	flag.IntVar(&nodeMode, "nodeMode", common.Node_Mode_Repeat, "set the mode of Node(repeat or once)")
+	flag.Float64Var(&capa, "capa", common.Node_Capacity_Normal, "set the capacity of the edge node")
 }
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: node [-h] [-mip masterip] [-mport masterport] [-nport nodeport] [-poolcap cap_of_pool] [-bw bandwidth] 
 [-g type_of_machine] [-groupIndex index_of_group] [-pscTimeAvg presence_time_avg] [-pscTimeSig presence_time_sig] [-avl avl]
+[-nodeMode nodeMode] [-capa capa]
 
 Options:
 `)
@@ -63,8 +69,10 @@ func main(){
 	}
 
 	node := connect.NewNode(masterIP, masterPort, nodePort)
-	node.SetNodePara(bandWidth, machineType, startTime, poolCap)
+	node.SetNodePara(bandWidth, machineType, startTime, poolCap, nodeMode)
 	node.SetNetworkPara(groupIndex, pscTimeAvg, pscTimeSig, avl)
+	node.Capacity = capa
+	log.Printf("Capacity is %f\n", node.Capacity)
 	node.InitConnection()
 	//node.Join()
 	var wg sync.WaitGroup

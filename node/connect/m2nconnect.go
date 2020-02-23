@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	pb "taskAssignmentForEdge/proto"
 	"taskAssignmentForEdge/taskmgt"
@@ -18,7 +19,17 @@ import (
 func (no *Node) StartRecvServer(wg *sync.WaitGroup) {
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(no.Sport))
 	if err != nil {
-		log.Fatalf("Failed to start receiver server: %v", err)
+		log.Printf("Failed to start receiver server: %v\n", err)
+		lis, err = net.Listen("tcp", ":")
+		if err != nil {
+			log.Fatalf("Failed to start receiver server again: %v\n", err)
+			os.Exit(0)
+		} else {
+			addr := lis.Addr().String()
+			addrlist := strings.Split(addr, ":")
+			no.Sport, err = strconv.Atoi(addrlist[len(addrlist)-1])
+			log.Printf("Succeed to start receiver server with new address: %v, port:%d\n", addr, no.Sport)
+		}
 	}
 	s := grpc.NewServer()
 	pb.RegisterMaster2NodeConnServer(s, no)
@@ -86,6 +97,7 @@ func (no *Node) TaskRecvHandler(task *taskmgt.TaskEntity) {
 	task.Status = taskmgt.TaskStatusCode_WaitForExec
 	//setup callback
 	task.SetTaskCallback(TaskFinishedHandler, no, task)
+	task.NodeCapa = no.Capacity
 
 	/*
 	//提交任务，队列长度加一

@@ -21,10 +21,18 @@ const (
 	Dispatcher_SCT_RC       //FemtoClouds risk-controlled
 	Dispatcher_SCT_Genetic_ExtraWait //shortest complete time with extra queueing time by the same node, genetic algorithm
 	Dispatcher_STT_Genetic_ExtraWait //shortest total time with extra queueing time by the same node, genetic algorithm
+	Dispatcher_STT_Genetic_KExtraWait  //8 k*extra_time
+)
+
+const (
+	ExtraTime_No = iota
+	ExtraTime_One
+	ExtraTime_K
 )
 
 var DispatcherList = []string {"Dispatcher_RR", "Dispatcher_SCT_Greedy","Dispatcher_SCT_Genetic",
-	"Dispatcher_STT_Greedy", "Dispatcher_STT_Genetic", "Dispatcher_SCT_EW_Genetic","Dispatcher_STT_EW_Genetic" }
+	"Dispatcher_STT_Greedy", "Dispatcher_STT_Genetic","Femtocloud", "Dispatcher_SCT_EW_Genetic",
+	"Dispatcher_STT_EW_Genetic","Dispatcher_STT_KEW_Genetic"}
 
 type Dispatcher interface {
 	//EnqueueTask(tq *taskmgt.TaskQueue, task *taskmgt.TaskEntity )
@@ -58,6 +66,8 @@ func NewDispatcher(index int)  Dispatcher{
 		return NewSctBetterGADispatcher()
 	case Dispatcher_STT_Genetic_ExtraWait:
 		return NewSttBetterGADispatcher()
+	case Dispatcher_STT_Genetic_KExtraWait:
+		return NewSttKGADispatcher()
 	default:
 		return nil
 	}
@@ -147,11 +157,28 @@ func GetTotalTime(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity, isAddExtra
 	return
 }
 
+func GetTotalTimeGeneral(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity, kExtra int)  (totalTime int64){
+	transTime := GetPredictTransTime(task, node)
+	waitTime := GetPredictWaitTime(node)
+	switch kExtra {
+	case ExtraTime_No:
+		execTime := GetPredictExecTime(task, node)
+		totalTime = transTime + waitTime + execTime
+	case ExtraTime_One:
+		execTime, extraTime := GetPredictTimes(task, node)
+		totalTime = transTime + waitTime + execTime + extraTime
+	case ExtraTime_K:
+		execTime, extraTime := GetPredictTimes(task, node)
+		totalTime = transTime + waitTime + execTime + extraTime*int64(task.RunCnt+1)
+	}
+	return
+}
+
 const (
 	IteratorNum = 500
 	CpRate = 0.3
 	ChromosomeNum = 20
-	ContinuousDiffCnt = 30
+	ContinuousDiffCnt = 100
 	FitnessDelta = 1e-10
 )
 
@@ -356,33 +383,6 @@ func GaAlgorithmBetter(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity,
 		fitnessList = calFitnessListBetter(generation, tasks, nodes, isAddExtra)
 		curBestchromo, curBestFitness := getMaxChromosome(generation, fitnessList)
 
-		//check
-		/*
-			fmt.Printf("Generation %d:\n", i)
-			PrintGeneration(generation)
-			checkFitness, checkTime := TestChromosome(curBestchromo, tasks, nodes, isAddExtra)
-			fmt.Printf("current best chromosome, totalTime %d, curfitness %.10f :", checkTime, checkFitness)
-			PrintChromosome(curBestchromo)*/
-		/*
-			for cnt := 0; cnt < len(curBestchromo); cnt ++ {
-				task := tasks[cnt]
-				node := nodes[curBestchromo[cnt]]
-				predTransTime, predWaitTime, predExecTime, predExtraTime := GetAllPredictTimes(task, node)
-				fmt.Printf("trans:%d, wait:%d, exec:%d, extra:%d, size:%f, bw:%f\n", predTransTime, predWaitTime, predExecTime, predExtraTime, task.DataSize, node.Bandwidth)
-			}
-		*/
-		/*
-			fmt.Printf("last best chromosome, lastBestFitness %.10f :", bestFitness)
-			PrintChromosome(bestChromo)*/
-		/*
-			for cnt := 0; cnt < len(curBestchromo); cnt ++ {
-				task := tasks[cnt]
-				node := nodes[bestChromo[cnt]]
-				predTransTime, predWaitTime, predExecTime, predExtraTime := GetAllPredictTimes(task, node)
-				fmt.Printf("trans:%d, wait:%d, exec:%d, extra:%d, size:%f, bw:%f\n", predTransTime, predWaitTime, predExecTime, predExtraTime, task.DataSize, node.Bandwidth)
-			}
-		*/
-		//end check
 		lastBestFitness = bestFitness
 		if curBestFitness > bestFitness {
 			bestFitness = curBestFitness
@@ -625,4 +625,94 @@ func PrintGeneration(generation [][]int) {
 	for i := 0; i < len(generation); i++ {
 		PrintChromosome(generation[i])
 	}
+}
+
+type calFitnessListFunc func([][]int, []*taskmgt.TaskEntity, []*nodemgt.NodeEntity, int) []float64
+
+func calFitnessListGeneral(generation [][]int, tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, kExtra int) []float64 {
+	if generation == nil || tasks == nil || nodes == nil {
+		return  nil
+	}
+	fitnessList := make([]float64, len(generation))
+	for i := 0; i < len(fitnessList); i++ {
+		var totalTime int64 = 0
+		chromosome := generation[i]
+		//fmt.Println(chromosome)
+		for j := 0; j < len(chromosome) ;j++ {
+			totalTime += GetTotalTimeGeneral(tasks[j], nodes[chromosome[j]], kExtra)
+		}
+		//add up extra queueing time caused by the same node
+		if len(chromosome) > 1 {
+			nodeCntmap := make(map[int]int)
+			for _, v := range chromosome {
+				nodeCntmap[v]++
+			}
+			for key, value := range nodeCntmap {
+				//fmt.Printf("key:%d, value:%d\n", key, value)
+				node := nodes[key]
+				if value > 1 {
+					extraWaitTime := int64(value-1) * GetPredictAvgExecTime(node)
+					totalTime += extraWaitTime
+					//fmt.Printf("extra wait time (%d) by the same node(%s:%d, cnt:%d)\n", extraWaitTime, node.NodeId.IP, node.NodeId.Port, value)
+				}
+			}
+		}
+
+		fitnessList[i] = Fitness(totalTime)
+	}
+	return fitnessList
+}
+
+func GaAlgorithmGeneral(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iteratorNum int, chromosomeNum int, kExtra int, f calFitnessListFunc) []int {
+	fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
+	generation := createInitGeneration(len(tasks), len(nodes), chromosomeNum)
+	/*
+		fmt.Printf("First Generation:\n")
+		PrintGeneration(generation)*/
+	fitnessList := f(generation, tasks, nodes, kExtra)
+	bestChromo, bestFitness := getMaxChromosome(generation, fitnessList)
+	lastBestFitness := bestFitness
+	slightDiffcnt := 0
+	//fitnesshistory := make([]float64, IteratorNum)
+
+	rand.Seed(time.Now().UnixNano())
+
+	iterCnt := 0
+	for ; iterCnt < iteratorNum ; iterCnt++ {
+
+		//select
+		//fitnessList = calFitness(generation, tasks, nodes, isAddExtra)
+		chosenGeneration := selectChromosome(generation, fitnessList)
+
+		//create new generation
+		fitnessList = f(chosenGeneration, tasks, nodes, kExtra)
+
+		//first, copy part of max N old generation to be new generation
+		copyNum := (int)(CpRate*float64(chromosomeNum))
+		generation = getMaxNChromosome(chosenGeneration, fitnessList, copyNum)
+
+		//second, create the rest part of new generation by cross and mutation
+		childGeneration := crossAndMutation(chosenGeneration, fitnessList, chromosomeNum - copyNum, len(tasks), len(nodes))
+		generation = append(generation, childGeneration...)
+
+		fitnessList = f(generation, tasks, nodes, kExtra)
+		curBestchromo, curBestFitness := getMaxChromosome(generation, fitnessList)
+
+		lastBestFitness = bestFitness
+		if curBestFitness > bestFitness {
+			bestFitness = curBestFitness
+			bestChromo = curBestchromo
+		}
+
+		if bestFitness - lastBestFitness < FitnessDelta {
+			slightDiffcnt ++
+			if slightDiffcnt >= ContinuousDiffCnt {
+				break
+			}
+		} else {
+			slightDiffcnt = 0
+		}
+	}
+
+	return bestChromo
 }

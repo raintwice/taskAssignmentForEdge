@@ -23,7 +23,7 @@ func init() {
 }
 
 func usage() {
-    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dipatcher index_of_dispatcher] [-interval interval_of_dispatcher]
+    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dispatcher index_of_dispatcher] [-interval interval_of_dispatcher]
 Options:
 `)
     flag.PrintDefaults()
