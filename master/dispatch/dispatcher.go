@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"sort"
 	"taskAssignmentForEdge/master/nodemgt"
-	"taskAssignmentForEdge/master/predictor"
 	"taskAssignmentForEdge/taskmgt"
+	"taskAssignmentForEdge/master/predictor"
 	"time"
 )
 
@@ -78,9 +78,9 @@ func AssignTaskToNode(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) {
 	task.NodeId.IP = node.NodeId.IP
 	task.NodeId.Port = node.NodeId.Port
 	task.Status = taskmgt.TaskStatusCode_Assigned
-	log.Printf("Predict: task %d, trans:%d ms, wait:%d ms, exec:%d ms, extra:%d ms in Node(%s:%d)", task.TaskId,
+	/*log.Printf("Predict: task %d, trans:%d ms, wait:%d ms, exec:%d ms, extra:%d ms in Node(%s:%d)", task.TaskId,
 		task.PredictTransTime/1e3, task.PredictWaitTime/1e3, task.PredictExecTime/1e3, task.PredictExtraTime/1e3,
-		task.NodeId.IP, task.NodeId.Port)
+		task.NodeId.IP, task.NodeId.Port)*/
 	node.TqPrepare.EnqueueTask(task)
 }
 
@@ -349,7 +349,7 @@ func GaAlgorithm2(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iter
 
 //
 func GaAlgorithmBetter(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iteratorNum int, chromosomeNum int, isAddExtra bool) []int {
-	fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
+	//fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
 	generation := createInitGeneration(len(tasks), len(nodes), chromosomeNum)
 	/*
 		fmt.Printf("First Generation:\n")
@@ -664,7 +664,7 @@ func calFitnessListGeneral(generation [][]int, tasks []*taskmgt.TaskEntity, node
 }
 
 func GaAlgorithmGeneral(tasks []*taskmgt.TaskEntity, nodes []*nodemgt.NodeEntity, iteratorNum int, chromosomeNum int, kExtra int, f calFitnessListFunc) []int {
-	fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
+	//fmt.Printf("start ga GaAlgorithmBetter, tasknum:%d, nodenum:%d \n", len(tasks), len(nodes))
 	generation := createInitGeneration(len(tasks), len(nodes), chromosomeNum)
 	/*
 		fmt.Printf("First Generation:\n")

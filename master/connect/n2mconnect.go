@@ -70,6 +70,7 @@ func (ms *Master) JoinGroup(ctx context.Context, in *pb.JoinRequest) (*pb.JoinRe
 			return &pb.JoinReply{Reply: false}, nil
 		} else {
 			ms.Nq.EnqueueNode(node)
+			log.Printf("Add one node, there are %d nodes in the queue\n", ms.Nq.GetQueueNodeNum())
 		}
 	} else {
 		log.Printf("Node(%s:%d) has joined in the group repeatedly", in.IpAddr, in.Port)
@@ -113,6 +114,7 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 func (ms *Master) ExitGroup(ctx context.Context, in *pb.ExitRequest) (*pb.ExitReply, error) {
 	nodeid := common.NodeIdentity{in.IpAddr, int(in.Port)}
 	node := ms.Nq.DequeueNode(nodeid)
+	log.Printf("Exit one node, there are %d nodes in the queue\n", ms.Nq.GetQueueNodeNum())
 	if node != nil {
 		//把待删除节点里面的任务加入总任务队列中, 重新运行
 		ms.NodeExitEventHandler(node)

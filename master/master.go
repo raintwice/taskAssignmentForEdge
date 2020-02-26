@@ -42,8 +42,8 @@ func main() {
     var wg sync.WaitGroup
     wg.Add(1)
     go ms.StartGrpcServer(&wg)
-    wg.Add(1)
-    go ms.StartHeartbeatChecker(&wg)
+  //  wg.Add(1)
+   // go ms.StartHeartbeatChecker(&wg)
     wg.Add(1)
     go ms.StartDispatcher(&wg)
     wg.Add(1)

@@ -74,6 +74,10 @@ func ( dp *SttGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *node
     }
 
     nq.Rwlock.Lock()
+    defer nq.Rwlock.Unlock()
+    if nq.NodeList.Len() == 0 {
+        return false
+    }
 
    // gaStartTST := time.Now().UnixNano()
 
@@ -92,7 +96,7 @@ func ( dp *SttGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *node
    // gaUsedTime := time.Now().UnixNano() - gaStartTST
    // log.Printf("STT GA algorithm use %d us", gaUsedTime/1e3)
 
-    nq.Rwlock.Unlock()
+   // nq.Rwlock.Unlock()
     return true
 }
 
@@ -112,7 +116,10 @@ func ( dp *SttBetterGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq
     }
 
     nq.Rwlock.Lock()
-
+    defer nq.Rwlock.Unlock()
+    if nq.NodeList.Len() == 0 {
+        return false
+    }
     // gaStartTST := time.Now().UnixNano()
 
     tasks := tq.DequeueAllTasks()   //调度队列弹出所有任务
@@ -130,7 +137,6 @@ func ( dp *SttBetterGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq
     // gaUsedTime := time.Now().UnixNano() - gaStartTST
     // log.Printf("STT GA algorithm use %d us", gaUsedTime/1e3)
 
-    nq.Rwlock.Unlock()
     return true
 }
 
@@ -149,6 +155,10 @@ func ( dp *SttKGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nod
     }
 
     nq.Rwlock.Lock()
+    defer nq.Rwlock.Unlock()
+    if nq.NodeList.Len() == 0 {
+        return false
+    }
 
     // gaStartTST := time.Now().UnixNano()
 
@@ -167,6 +177,5 @@ func ( dp *SttKGADispatcher) MakeDispatchDecision(tq *taskmgt.TaskQueue, nq *nod
     // gaUsedTime := time.Now().UnixNano() - gaStartTST
     // log.Printf("STT GA algorithm use %d us", gaUsedTime/1e3)
 
-    nq.Rwlock.Unlock()
     return true
 }

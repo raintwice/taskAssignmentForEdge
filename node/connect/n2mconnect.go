@@ -34,6 +34,10 @@ func (no *Node) InitConnection() {
     }
 }
 
+func (no *Node) ColseConnection() {
+	no.conn.Close()
+}
+
 func (no *Node) Join() {
 	if no.isOnline == true {
 		fmt.Printf("Notice: Node(%s:%d) is already online\n", no.Saddr, no.Sport)
@@ -91,6 +95,7 @@ func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
 		time.Sleep(pscTime)
 		no.Exit()
 		if no.NodeMode == common.Node_Mode_Once {
+			no.ColseConnection()
 			os.Exit(0)
 		}
 		fmt.Println(time.Now().String())
