@@ -41,6 +41,7 @@ type Node struct {
 	CurTaskNum int  //队列长度即当前任务总数，等待队列长度= CurTaskNum - PoolCap if CurTaskNum < PoolCap else 0
 	curTaskRwLock  sync.RWMutex//
 	*/
+	IsSetRecvServer bool
 }
 
 func NewNode(addr string, port int, sport int) (* Node) {
@@ -49,6 +50,7 @@ func NewNode(addr string, port int, sport int) (* Node) {
 		Mport:port,
 		Sport:sport,
 		isOnline:false,
+		IsSetRecvServer:false,
 	}
 }
 

@@ -43,7 +43,9 @@ func (ms *Master) InitNodeConn(node *nodemgt.NodeEntity ) error {
 }
 
 func (ms *Master) CloseNodeConn(node *nodemgt.NodeEntity) {
-	node.Conn.Close()
+	if node.Conn == nil {
+		node.Conn.Close()
+	}
 }
 
 func (ms *Master) InitPredictorForNode(no *nodemgt.NodeEntity) {
@@ -128,6 +130,14 @@ func (ms *Master) ExitGroup(ctx context.Context, in *pb.ExitRequest) (*pb.ExitRe
 		log.Printf("Unexpected call of ExitGroup from nonexistent node(%s:%d) ", in.IpAddr, in.Port)
 		return &pb.ExitReply{Reply: false}, nil
 	}
+}
+
+func (ms *Master) ClearUpConnBeforeExit() {
+	nodes := ms.Nq.GetAllNodesWithoutLock() //节点队列列出所有节点，未出队
+	for _, node := range nodes {
+		ms.CloseNodeConn(node)
+	}
+	log.Printf("Master has break all the connection with nodes.")
 }
 
 //心跳

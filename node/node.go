@@ -4,7 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os/signal"
+	"syscall"
 	"taskAssignmentForEdge/common"
+	"time"
 
 	//"log"
 	"os"
@@ -60,6 +63,18 @@ Options:
 	flag.PrintDefaults()
 }
 
+func exitByKill(no *connect.Node, wg *sync.WaitGroup) {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
+	s := <- c
+	log.Printf("Node(%s:%d) Received Kill Signal, %v",  no.Saddr, no.Sport, s)
+	//release
+	no.CloseConnection()
+
+	wg.Done()
+	os.Exit(0)
+}
+
 func main(){
 	flag.Parse()
 	if h {
@@ -74,9 +89,17 @@ func main(){
 	node.Capacity = capa
 	log.Printf("Capacity is %f\n", node.Capacity)
 	node.InitConnection()
-	//node.Join()
+
 	var wg sync.WaitGroup
+	wg.Add(1)
+	go node.StartRecvServer(&wg)
+	wg.Add(1)
+	go exitByKill(node, &wg)
+	for ; node.IsSetRecvServer == false; {
+		time.Sleep(time.Millisecond)
+	}
 	if pscTimeSig == 0 {
+		time.Sleep(time.Duration(node.StartJoinTime)*time.Second)
 		node.Join()
 	} else {
 		wg.Add(1)
@@ -84,7 +107,6 @@ func main(){
 	}
     wg.Add(1)
 	go node.StartHeartbeatSender(&wg)
-	wg.Add(1)
-	go node.StartRecvServer(&wg)
+	//node.Join()
     wg.Wait()
 }

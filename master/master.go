@@ -3,8 +3,11 @@ package main
 import (
     "flag"
     "fmt"
+    "log"
     "os"
+    "os/signal"
     "sync"
+    "syscall"
     "taskAssignmentForEdge/common"
     "taskAssignmentForEdge/master/connect"
     "taskAssignmentForEdge/master/dispatch"
@@ -29,6 +32,18 @@ Options:
     flag.PrintDefaults()
 }
 
+func exitByKill(ms *connect.Master, wg *sync.WaitGroup) {
+    c := make(chan os.Signal)
+    signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
+    s := <- c
+    log.Printf("Received Kill Signal, %v", s)
+    //release
+    ms.CloseClientConn()
+    ms.ClearUpConnBeforeExit()
+    wg.Done()
+    os.Exit(0)
+}
+
 func main() {
     flag.Parse()
     if h {
@@ -42,6 +57,8 @@ func main() {
     var wg sync.WaitGroup
     wg.Add(1)
     go ms.StartGrpcServer(&wg)
+    wg.Add(1)
+    go exitByKill(ms, &wg)
   //  wg.Add(1)
    // go ms.StartHeartbeatChecker(&wg)
     wg.Add(1)

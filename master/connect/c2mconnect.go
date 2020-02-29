@@ -42,6 +42,13 @@ func (ms *Master) InitClientConn( ) error {
 	return nil
 }
 
+func (ms *Master) CloseClientConn() {
+	if ms.ClientConn != nil {
+		ms.ClientConn.Close()
+	}
+	log.Printf("Master has break the connection with client.")
+}
+
 func (ms *Master) SubmitTasks(ctx context.Context, in *pb.TaskSubmitReq) (*pb.TaskSubmitResp, error) {
 	if ms.ClientConn == nil {
 		ms.InitClientConn()

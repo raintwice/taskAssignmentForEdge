@@ -34,8 +34,9 @@ func (no *Node) InitConnection() {
     }
 }
 
-func (no *Node) ColseConnection() {
+func (no *Node) CloseConnection() {
 	no.conn.Close()
+	log.Printf("Node(%s:%d) has break the connection with master", no.Saddr, no.Sport)
 }
 
 func (no *Node) Join() {
@@ -95,7 +96,7 @@ func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
 		time.Sleep(pscTime)
 		no.Exit()
 		if no.NodeMode == common.Node_Mode_Once {
-			no.ColseConnection()
+			no.CloseConnection()
 			os.Exit(0)
 		}
 		fmt.Println(time.Now().String())

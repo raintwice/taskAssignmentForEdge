@@ -26,6 +26,10 @@ func (clt *Client) InitConnection() {
 	}
 }
 
+func (clt *Client) CloseConnection() {
+	clt.conn.Close()
+}
+
 //client as recevier
 /*
 func (clt *Client) SubmitTask(taskgp []*taskmgt.TaskEntity) {
@@ -162,6 +166,8 @@ func (clt *Client) ProduceTasks() {
 	if clt.EvaluationStatus ==  EvaluationStatus_Finish {
 		os.Exit(0)
 	}*/
+
+	clt.CloseConnection()
 }
 
 func (clt *Client) StartTaskProducer(wg *sync.WaitGroup) {

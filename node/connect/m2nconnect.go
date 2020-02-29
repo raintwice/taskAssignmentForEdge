@@ -31,6 +31,7 @@ func (no *Node) StartRecvServer(wg *sync.WaitGroup) {
 			log.Printf("Succeed to start receiver server with new address: %v, port:%d\n", addr, no.Sport)
 		}
 	}
+	no.IsSetRecvServer = true
 	s := grpc.NewServer()
 	pb.RegisterMaster2NodeConnServer(s, no)
 	s.Serve(lis)
