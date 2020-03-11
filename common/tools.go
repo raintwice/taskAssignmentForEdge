@@ -2,7 +2,11 @@ package common
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net"
+	"os/exec"
+	"time"
 )
 
 func ExternalIP() (net.IP, error) {
@@ -49,4 +53,30 @@ func getIpFromAddr(addr net.Addr) net.IP {
 	}
 
 	return ip
+}
+
+func RemoveTaskFile(taskFileName string) {
+	time.Sleep(time.Second)
+	//remove the task file
+	taskFileDir := Task_File_Dir + "/" + taskFileName
+	cmdPara := fmt.Sprintf("rm %s", taskFileDir)
+	//log.Printf("%s", cmdPara)
+	cmd := exec.Command("/bin/bash", "-c", cmdPara)
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("Error, cannot rm %s due to %v", taskFileName, err)
+	}
+}
+
+func RemoveAllTaskFile() {
+	time.Sleep(time.Second)
+	//remove the task file
+	taskFileDir := Task_File_Dir + "/*"
+	cmdPara := fmt.Sprintf("rm %s", taskFileDir)
+	//log.Printf("%s", cmdPara)
+	cmd := exec.Command("/bin/bash", "-c", cmdPara)
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("Error, cannot rm these task files due to %v", err)
+	}
 }

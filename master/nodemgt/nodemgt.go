@@ -20,7 +20,7 @@ type NodeEntity struct {
 	Conn *grpc.ClientConn        //master与node的通信连接
 	LastHeartbeat time.Time
 	HeartbeatSendCnt int
-	Bandwidth float64
+	Bandwidth float64  //in Mbps
 
 	//task
 	TqAssign *taskmgt.TaskQueue  //已经分配到节点的任务队列

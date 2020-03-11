@@ -2,10 +2,12 @@ package connect
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/net/context"
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/master/nodemgt"
@@ -17,7 +19,7 @@ import (
 //分配一个带程序文件的任务
 func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) (* pb.SendStatus, error) {
 	if task == nil || node == nil {
-		return nil, errors.New("The task to assign is empty!")
+		return nil, errors.New("Task " + strconv.Itoa(int(task.TaskId)) +  "to assign is empty!")
 	}
 
 	var (
@@ -28,21 +30,21 @@ func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEnti
 		status    *pb.SendStatus
 		err       error
 		chunkSize  = 1<<20
-		isSendInfo = false
+		isSendData = false
 	)
 
 	c := pb.NewMaster2NodeConnClient(node.Conn)
-	file, err = os.Open(task.TaskName)
+	file, err = os.Open(common.Task_File_Dir + "/" + task.TaskLocation)
 	if err != nil {
-		log.Printf("Cannot open task file %s ", task.TaskName)
-		return nil, err
+		//log.Printf("Cannot open task file %s ", task.TaskLocation)
+		return nil, errors.New("Cannot open task file " + task.TaskLocation + " ：" + err.Error())
 	}
 	defer file.Close()
 
 	stream, err := c.AssignTask(context.Background())
 	if err != nil {
-		log.Printf("Failed to create AssignTask stream for task file %s", task.TaskName)
-		return nil, err
+		//log.Printf("Failed to create AssignTask stream for task file %s", task.TaskName)
+		return nil, errors.New("Failed to create AssignTask stream for task " + strconv.Itoa(int(task.TaskId)) + " ：" + err.Error())
 	}
 	defer stream.CloseSend()
 
@@ -59,28 +61,27 @@ func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEnti
 
 				continue
 			}
-			log.Printf("Failed to copy from task file %s to buffer", task.TaskName)
-			return nil, err
+			//log.Printf("Failed to copy from task file %s to buffer", task.TaskName)
+			return nil, errors.New("Failed to copy from task file " + strconv.Itoa(int(task.TaskId))  + " to buffer：" + err.Error())
 		}
 
-		if isSendInfo {
+		if isSendData {
 			err = stream.Send(&pb.TaskChunk{
 				Content: buf[:n],
 			})
 		} else {
+			taskinfo := &pb.TaskInfo{}
+			taskmgt.TranslateAssigningTaskE2P(task, taskinfo)
 			err = stream.Send(&pb.TaskChunk{
-				Info:&pb.TaskInfo{
-					TaskName: task.TaskName,
-					TaskId: task.TaskId,
-				},
+				Info: taskinfo,
 				Content: buf[:n],
 			})
-			isSendInfo = true
+			isSendData = true
 		}
 
 		if err != nil {
-			log.Printf("Failed to send chunk via stream for task file %s", task.TaskName)
-			return nil, err
+			//log.Printf("Failed to send chunk via stream for task file %s", task.TaskName)
+			return nil, errors.New("Failed to send chunk via stream for task file " + task.TaskLocation)
 		}
 	}
 
@@ -88,25 +89,47 @@ func (ms *Master) AssignOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEnti
 
 	status, err = stream.CloseAndRecv()
 	if err != nil {
-		log.Printf("Failed to receive response from node(IP:%s:%d)", node.NodeId.IP, node.NodeId.Port)
-		return nil, err
+		errStr := fmt.Sprintf("Failed to receive response from node(IP:%s:%d)", node.NodeId.IP, node.NodeId.Port)
+		return nil, errors.New(errStr)
 	}
 
 	if status.Code != pb.SendStatusCode_Ok {
-		log.Printf("Failed to assign task file %s", task.TaskName)
+		//log.Printf("Failed to assign task file %s", task.TaskName)
 		return status, errors.New(
-			"Failed to assign task file")
+			"Failed to assign task " + strconv.Itoa(int(task.TaskId)) )
 	}
 
 	return status, nil
 }
 
+func (ms *Master) TransmitOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEntity) {
+	if task == nil || node == nil {
+		log.Printf("Task %d to assign is empty!", task.TaskId)
+		return
+	}
+	task.RunCnt++
+	task.AssignTST = time.Now().UnixNano()/1e3
+	_, err := ms.AssignOneTask(task, node)
+	node.TqPrepare.DequeueTask(task.TaskId)
+	if err != nil {
+		log.Printf("Transmit task %d failed, %v", task.TaskId, err.Error())
+		task.Status = taskmgt.TaskStatusCode_TransmitFailed
+		if task.IsAborted == true {
+			log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
+		} else {
+			ms.ReturnOrRescheduleTask(task)
+		}
+	} else {
+		task.Status = taskmgt.TaskStatusCode_TransmitSucess
+		node.TqAssign.EnqueueTask(task)
+	}
+
+}
 
 func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 	task.RunCnt++
 
 	//log.Printf("Start to transmit Task %d to node[%s:%d] in the %dth time\n", task.TaskId, task.NodeId.IP, task.NodeId.Port, task.RunCnt)
-
 	node := ms.Nq.FindNode(task.NodeId)
 	if node == nil { //刚好节点退出了, 已经被处理, 新clone的task已经被加入调度队列
 		log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
@@ -207,32 +230,30 @@ func (ms *Master) AssignSimTasksForNode(node *nodemgt.NodeEntity) {
 		task.Status = taskmgt.TaskStatusCode_Transmiting
 		go ms.SimulateTransmitOneTask(task)
 	}
+	ms.preDispatchCnt += len(tasks)
 }
 
 func (ms *Master) AssignTaskForNode(node *nodemgt.NodeEntity) {
 	if node == nil || node.TqPrepare.GettaskNum() == 0 {
 		return
 	}
-	node.TqPrepare.Rwlock.RLock()
-	for e := node.TqPrepare.TaskList.Front(); e != nil; e = e.Next() {
-		task := e.Value.(* taskmgt.TaskEntity)
-		ms.AssignOneTask(task, node)
-		//TBD, 分配失败先不管了
+	tasks := node.TqPrepare.GetTasksByStatus(taskmgt.TaskStatusCode_Assigned)  //task will be removed to TqAssign when succeed to transmit
+	//log.Printf("Get %d tasks in queue(%s) that needs to transmit", len(tasks), node.TqPrepare.Name)
+	for _, task := range tasks {
+		task.Status = taskmgt.TaskStatusCode_Transmiting
+		go ms.TransmitOneTask(task, node)
 	}
-	node.TqPrepare.Rwlock.RUnlock()
+	ms.preDispatchCnt += len(tasks)
+	//log.Printf("pre dispatch task count %d, setting Num %d", ms.preDispatchCnt, ms.PreDispatchNum)
 }
 
 func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 	for range time.Tick(time.Millisecond*common.AssignInterval) {
 		isNeedAssign := false
-		if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
+		if ms.preDispatchCnt > ms.PreDispatchNum{
 			isNeedAssign = ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
 		} else{
-			ms.preDispatchCnt += ms.Tq.GettaskNum()
 			isNeedAssign = ms.defaultDispachter.MakeDispatchDecision(ms.Tq, ms.Nq)
-			if ms.preDispatchCnt > common.PreDispatch_RR_Cnt {
-				log.Printf("Change to the chosen algorithm")
-			}
 		}
 		//isNeedAssign := ms.dispatcher.MakeDispatchDecision(ms.Tq, ms.Nq)
 		if isNeedAssign == false {
@@ -245,7 +266,11 @@ func (ms *Master) StartDispatcher(wg *sync.WaitGroup) {
 			if node.TqPrepare.GettaskNum() == 0 {
 				continue
 			} else {
-				go ms.AssignSimTasksForNode(node)
+				if common.EvalType == common.SIMULATION {
+					go ms.AssignSimTasksForNode(node)
+				} else {
+					go ms.AssignTaskForNode(node)
+				}
 			}
 		}
 		ms.Nq.Rwlock.RUnlock()

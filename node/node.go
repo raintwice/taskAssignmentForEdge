@@ -92,12 +92,13 @@ func main(){
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go node.StartRecvServer(&wg)
-	wg.Add(1)
 	go exitByKill(node, &wg)
+
+	go node.StartRecvServer()
 	for ; node.IsSetRecvServer == false; {
 		time.Sleep(time.Millisecond)
 	}
+
 	if pscTimeSig == 0 {
 		time.Sleep(time.Duration(node.StartJoinTime)*time.Second)
 		node.Join()

@@ -2,6 +2,7 @@ package connect
 
 import (
 	"google.golang.org/grpc"
+	"log"
 	"taskAssignmentForEdge/master/dispatch"
 	"taskAssignmentForEdge/master/nodemgt"
 	"taskAssignmentForEdge/master/predictor"
@@ -15,6 +16,7 @@ type Master struct {
 	dispatcher dispatch.Dispatcher
 	defaultDispachter dispatch.Dispatcher
 	preDispatchCnt int
+	PreDispatchNum int
 	dispatchInterval int //in ms
 
 	ClientConn *grpc.ClientConn
@@ -29,7 +31,7 @@ func NewMaster() *Master {
 	}
 }
 
-func (ms *Master) Init(dispatchIndex int, dispatchItv int) {
+func (ms *Master) Init(dispatchIndex int, dispatchItv int, preDispatchNum int) {
 	ms.Tq = taskmgt.NewTaskQueue("global task queue")
 	ms.Nq = nodemgt.NewNodeQueue()
 
@@ -38,4 +40,6 @@ func (ms *Master) Init(dispatchIndex int, dispatchItv int) {
 	ms.runtimePredictMng = predictor.NewRunTimePredictManager()
 	ms.connPredictMng = predictor.NewConnPredictManager()
 	ms.dispatchInterval = dispatchItv
+	ms.PreDispatchNum = preDispatchNum
+	log.Printf("Pre-dispatch %d tasks", ms.PreDispatchNum)
 }

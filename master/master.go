@@ -17,16 +17,18 @@ var (
     h bool
     dptIndex int
     interval int
+    preDispatchNum int
 )
 
 func init() {
     flag.BoolVar(&h, "h", false, "print help information")
     flag.IntVar(&dptIndex, "dispatcher", dispatch.Dispatcher_RR, "set the dispatcher")
     flag.IntVar(&interval, "interval", common.AssignInterval, "set the interval of dispatcher in ms")
+    flag.IntVar(&preDispatchNum, "preDispatchNum", common.PreDispatch_RR_Cnt, "set the number of task to pre-dispatch")
 }
 
 func usage() {
-    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dispatcher index_of_dispatcher] [-interval interval_of_dispatcher]
+    fmt.Fprintf(os.Stderr, `Usage: node [-h] [-dispatcher index_of_dispatcher] [-interval interval_of_dispatcher] [-preDispatchNum preDispatch_Num]
 Options:
 `)
     flag.PrintDefaults()
@@ -53,7 +55,7 @@ func main() {
     }
 
     ms := connect.NewMaster()
-    ms.Init(dptIndex, interval)
+    ms.Init(dptIndex, interval, preDispatchNum)
     var wg sync.WaitGroup
     wg.Add(1)
     go ms.StartGrpcServer(&wg)

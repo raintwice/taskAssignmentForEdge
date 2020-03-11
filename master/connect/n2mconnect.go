@@ -96,13 +96,13 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 		if task.RunCnt >= taskmgt.TaskMaxRunCnt {
 			task.FinishTST = time.Now().UnixNano()/1e3
 			ms.ReturnOneTaskToClient(task)
-			log.Printf("Discard and return task(Id:%d) due to exiting of Node(%s:%d) and reaching maxinum run times(%d)", node.NodeId.IP, node.NodeId.Port, task.RunCnt)
+			log.Printf("Discard and return task(Id:%d) due to exiting of Node(%s:%d) and reaching maxinum run times(%d)", task.TaskId, node.NodeId.IP, node.NodeId.Port, task.RunCnt)
 		} else {
 			//clone this task, abandon the origin one
 			newTask := taskmgt.CloneTask(task)
 			newTask.Status = taskmgt.TaskStatusCode_TransmitFailed
 			ms.Tq.EnqueueTask(newTask)
-			log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", node.NodeId.IP, node.NodeId.Port)
+			log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", task.TaskId, node.NodeId.IP, node.NodeId.Port)
 		}
 		task.IsAborted = true //abandon this origin task, , the origin one will drop itself
 	}
@@ -194,7 +194,7 @@ func (ms *Master) SendTaskResults(ctx context.Context, in *pb.TaskResultReq) (*p
 		}
 		task := node.TqAssign.FindTask(taskinfo.TaskId)
 		if task == nil {  //nonexistent task or finished rescheduled task
-			log.Printf("Ignore: Receive a discarded task(Id:%d, run times:%d) due to nonexistent task in queue", taskinfo.TaskId, taskinfo.RunCnt)
+			log.Printf("Ignore: Receive a nonexistent task(Id:%d, run times:%d) in assigned queue of node[%s:%d]", taskinfo.TaskId, taskinfo.RunCnt, taskinfo.AssignNodeIP, taskinfo.AssignNodePort)
 			continue
 		}
 		if task.RunCnt != taskinfo.RunCnt { //have been rescheduled

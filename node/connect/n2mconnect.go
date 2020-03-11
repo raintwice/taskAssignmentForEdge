@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"errors"
 	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -78,6 +79,7 @@ func (no *Node) Exit() {
 		log.Printf("Successed to exit")
 		no.isOnline = false
 		no.StopPool()
+		common.RemoveAllTaskFile()
 	} else {
 		log.Printf("Failed to exit")
 	}
@@ -95,12 +97,17 @@ func (no *Node) StartNetworkManager(wg *sync.WaitGroup) {
 		pscTime := time.Duration(pscTimeInSec*float64(time.Second))
 		time.Sleep(pscTime)
 		no.Exit()
+		no.StopRecvServer()
 		if no.NodeMode == common.Node_Mode_Once {
 			no.CloseConnection()
 			os.Exit(0)
 		}
 		fmt.Println(time.Now().String())
 		time.Sleep(interval)
+		go no.StartRecvServer()
+		for ; no.IsSetRecvServer == false; {
+			time.Sleep(time.Millisecond)
+		}
 		no.Join()
 		fmt.Println(time.Now().String())
 	}
@@ -146,7 +153,7 @@ func (no *Node) StartHeartbeatSender(wg *sync.WaitGroup) {
 }
 
 //Grpc interface for send tasks
-func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
+func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) error {
 	c := pb.NewNode2MasterConnClient(no.conn)
 
 	infoGp := make([]*pb.TaskInfo, 0)
@@ -162,7 +169,8 @@ func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 
 	r, err := c.SendTaskResults(context.Background(), &res)
 	if err != nil {
-		log.Printf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
+		errStr := fmt.Sprintf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
+		return errors.New(errStr)
 	} else {
 		if(r.Reply) {
 			var idstr string = ""
@@ -171,9 +179,11 @@ func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 			}
 			log.Printf("Successed to return tasks(%s) result in Node(%s:%d)", idstr, no.Saddr, no.Sport)
 		} else {
-			log.Printf("Failed to retun task result in Node(%s:%d)", no.Saddr, no.Sport)
+			errStr := fmt.Sprintf("Failed to retun task result in Node(%s:%d) dut to wrong reply", no.Saddr, no.Sport)
+			return errors.New(errStr)
 		}
 	}
+	return nil
 }
 
 //send one task
@@ -183,13 +193,20 @@ func (no *Node) SendOneTask(task *taskmgt.TaskEntity) {
 	}
 	taskGp := make([]*taskmgt.TaskEntity,0)
 	taskGp = append(taskGp, task)
-	no.SendTaskResults(taskGp)
+	err := no.SendTaskResults(taskGp)
+	if err != nil {
+		log.Printf(err.Error())
+	}
+	/*else {
+		go common.RemoveTaskFile(task.TaskLocation)
+	}*/
 }
 
 //send tasks
+/*
 func (no *Node) SendTasks(taskGp []*taskmgt.TaskEntity) {
 	if no == nil || taskGp == nil || len(taskGp) == 0 {
 		return
 	}
 	no.SendTaskResults(taskGp)
-}
+}*/

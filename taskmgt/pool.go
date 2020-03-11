@@ -1,6 +1,9 @@
 package taskmgt
 
-import "sync"
+import (
+	"sync"
+	"taskAssignmentForEdge/common"
+)
 
 type Pool struct {
 	EntryChannel chan *TaskEntity
@@ -23,7 +26,11 @@ func NewPool(cap int) *Pool {
 func (p *Pool) worker(workId int) {
 	for task := range p.JobsChannel {
 		//task.Execute()
-		task.RunSimulation()
+		if common.EvalType == common.SIMULATION {
+			task.RunSimulation()
+		} else {
+			task.RunEvaluation()
+		}
 		//log.Printf("Task %d completed in worker ID %d", task.TaskId, workId)
 		p.JobsCntRwLock.Lock()
 		p.JobsCnt--

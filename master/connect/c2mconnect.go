@@ -1,10 +1,13 @@
 package connect
 
 import (
+	"errors"
+	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os/exec"
 	"strconv"
 	"sync"
 	"taskAssignmentForEdge/common"
@@ -60,9 +63,22 @@ func (ms *Master) SubmitTasks(ctx context.Context, in *pb.TaskSubmitReq) (*pb.Ta
 		taskmgt.TranslateSubmittingTaskFromP2E(taskinfo, newTask)
 		newTask.SubmitTST = time.Now().UnixNano()/1e3
 
-		ms.Tq.EnqueueTask(newTask) //加入队列
+
 		//log.Printf("Task(Id:%d) has joined in global task queue", newTask.TaskId)
-		gTaskId++
+		//create empty task file for evaluation
+		newTask.TaskLocation = fmt.Sprintf("task-%05d.data", newTask.TaskId)
+		taskFileDir := common.Task_File_Dir + "/" + newTask.TaskLocation
+		taskFileSize := int32(newTask.DataSize * 1024.0 * 1024.0)
+		cmdPara := fmt.Sprintf("truncate -s %d %s", taskFileSize, taskFileDir)
+		cmd := exec.Command("/bin/bash", "-c", cmdPara)
+		err := cmd.Run()
+		if err != nil {
+			log.Printf("Error, cannot build %s", newTask.TaskLocation)
+			return &pb.TaskSubmitResp{Reply: false}, errors.New("Cannot build task file.")
+		} else {
+			ms.Tq.EnqueueTask(newTask) //加入队列
+			gTaskId++
+		}
 	}
 
 	return &pb.TaskSubmitResp{Reply: true}, nil

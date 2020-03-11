@@ -5,19 +5,19 @@ import (
 	//"google.golang.org/grpc"
 	//"io"
 	"log"
+	"taskAssignmentForEdge/common"
 	"time"
 
+	"golang.org/x/net/context"
 	//"os"
 	//"sync"
 	//"taskAssignmentForEdge/common"
 	"taskAssignmentForEdge/taskmgt"
 	//"time"
 	pb "taskAssignmentForEdge/proto"
-	"golang.org/x/net/context"
 )
 
 //分配
-
 func (ms *Master) ReturnOneTaskToClient(task *taskmgt.TaskEntity) {
 	c := pb.NewMaster2ClientConnClient(ms.ClientConn)
 
@@ -39,8 +39,10 @@ func (ms *Master) ReturnOneTaskToClient(task *taskmgt.TaskEntity) {
 			log.Printf("Fail to return result of task %d to client", task.TaskId)
 		}
 	}
+	go common.RemoveTaskFile(task.TaskLocation)
 }
 
+/*
 func (ms *Master) ReturnTasksToClient(taskgp []*taskmgt.TaskEntity) {
 	c := pb.NewMaster2ClientConnClient(ms.ClientConn)
 	infogp := make([]*pb.TaskInfo, 0)
@@ -60,7 +62,7 @@ func (ms *Master) ReturnTasksToClient(taskgp []*taskmgt.TaskEntity) {
 			log.Printf("%s  ", task.TaskName)
 		}
 	}
-}
+}*/
 
 // if task status is not expected
 func (ms *Master) ReturnOrRescheduleTask(task *taskmgt.TaskEntity) {

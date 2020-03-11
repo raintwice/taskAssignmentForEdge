@@ -2,6 +2,7 @@ package taskmgt
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 	"reflect"
@@ -137,6 +138,26 @@ func (t *TaskEntity) Execute() error {
 	if err != nil {
 		t.Err = err
 		t.Status = TaskStatusCode_Failed
+	}
+	if t.callback != nil {
+		RunCallBack(t.callback, t.arg)
+	}
+	return err
+}
+
+//For evaluation
+func (t *TaskEntity) RunEvaluation() error {
+	t.ExecTST = time.Now().UnixNano()/1e3
+	t.Status = TaskStatusCode_Running
+	cmdPara := fmt.Sprintf(" python3 ./PythonTask/strassen-algorithm.py -i ./PythonTask/Testing/10.in -n %d", t.RuntimePreSet/3350)
+	cmd := exec.Command("/bin/bash", "-c", cmdPara)
+	err := cmd.Run()
+	if err != nil {
+		t.Err = err
+		t.Status = TaskStatusCode_Failed
+	} else {
+		t.FinishTST = time.Now().UnixNano()/1e3
+		t.Status = TaskStatusCode_Success
 	}
 	if t.callback != nil {
 		RunCallBack(t.callback, t.arg)

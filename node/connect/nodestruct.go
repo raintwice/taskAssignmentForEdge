@@ -41,6 +41,7 @@ type Node struct {
 	CurTaskNum int  //队列长度即当前任务总数，等待队列长度= CurTaskNum - PoolCap if CurTaskNum < PoolCap else 0
 	curTaskRwLock  sync.RWMutex//
 	*/
+	gRPCServer *grpc.Server
 	IsSetRecvServer bool
 }
 

@@ -1,6 +1,13 @@
 package common
 
 const (
+	EVALUATION = iota
+	SIMULATION
+)
+
+var EvalType int = EVALUATION
+
+const (
 	MasterIP = "127.0.0.1"
 	MasterPort  = 50051  //master端口
 	NodePort  = 50052   //node端口
@@ -20,7 +27,7 @@ type NodeIdentity struct {
 const (
 	MachineType_Simualted = iota
 	MachineType_Simualted_Fast
-	MachineType_RaspPi_3B
+	MachineType_RaspPi_3BPlus
 	MachineType_RaspPi_4B
 	MachineType_Surface_M3
 )
@@ -44,3 +51,5 @@ const (
 	Node_Capacity_Normal = 1.0
 	Node_Capacity_Fast = 1.5
 )
+
+const Task_File_Dir = "./EvalTaskfiles"
