@@ -1,5 +1,6 @@
 master/master
 node/node
+node/nodearm
 client/client
 proto/*pb.go
 .idea

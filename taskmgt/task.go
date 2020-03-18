@@ -149,7 +149,7 @@ func (t *TaskEntity) Execute() error {
 func (t *TaskEntity) RunEvaluation() error {
 	t.ExecTST = time.Now().UnixNano()/1e3
 	t.Status = TaskStatusCode_Running
-	cmdPara := fmt.Sprintf(" python3 ./PythonTask/strassen-algorithm.py -i ./PythonTask/Testing/10.in -n %d", t.RuntimePreSet/3350)
+	cmdPara := fmt.Sprintf(" python3 ./PythonTask/strassen-algorithm.py -i ./PythonTask/Testing/10.in -n %d", t.RuntimePreSet/13027)
 	cmd := exec.Command("/bin/bash", "-c", cmdPara)
 	err := cmd.Run()
 	if err != nil {
