@@ -129,7 +129,7 @@ func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 
 	node.TqLock.Lock()
 	defer node.TqLock.Unlock()
-	if task.IsAborted == true {
+	if task.IsTransAborted == true {
 		log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
 	} else {
 		entity := node.TqPrepare.FindTask(task.TaskId)
@@ -143,23 +143,18 @@ func (ms *Master) SimulateTransmitOneTask(task *taskmgt.TaskEntity) {
 			simTaskReq := &pb.SimTaskAssignReq{TaskGp:taskGrp}
 			c := pb.NewMaster2NodeConnClient(node.Conn)
 			status, err := c.AssignSimTasks(context.Background(), simTaskReq)
-			if err != nil { //cannot call grpc
+			if err != nil || status.Code != pb.SendStatusCode_Ok{ //cannot call grpc
 				log.Printf("Error: Cannot assign tasks to Node(%s:%d), %v", node.NodeId.IP, node.NodeId.Port, err)
 				task.Status = taskmgt.TaskStatusCode_TransmitFailed
 			} else {
-				if status.Code != pb.SendStatusCode_Ok {
-					log.Printf("Error: Cannot assign tasks to Node(%s:%d), %s", node.NodeId.IP, node.NodeId.Port, "status code is not ok")
-					task.Status = taskmgt.TaskStatusCode_TransmitFailed
-				} else {
-					task.Status = taskmgt.TaskStatusCode_TransmitSucess
-				}
+				task.Status = taskmgt.TaskStatusCode_TransmitSucess
 			}
 
-			node.TqPrepare.DequeueTask(task.TaskId)
 			if task.Status == taskmgt.TaskStatusCode_TransmitFailed {
-				ms.ReturnOrRescheduleTask(task)
+				//transmit next time
 			} else { //success
 				//log.Printf("Succeed to assign task(Id:%d) to Node(%s:%d)", task.TaskId, node.NodeId.IP, node.NodeId.Port)
+				node.TqPrepare.DequeueTask(task.TaskId)
 				node.TqAssign.EnqueueTask(task)
 			}
 		}

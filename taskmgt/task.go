@@ -42,38 +42,38 @@ const (TaskAttributeNum = 25
 
 type TaskEntity struct {
 	//attribute needed to input
-	Username      string  `protobuf:"bytes,1,opt,name=Username,proto3" json:"Username,omitempty"`
-	CPUReq        float64 `protobuf:"fixed64,2,opt,name=CPUReq,proto3" json:"CPUReq,omitempty"`
-	MemoryReq     float64 `protobuf:"fixed64,3,opt,name=MemoryReq,proto3" json:"MemoryReq,omitempty"`
-	DiskReq       float64 `protobuf:"fixed64,4,opt,name=DiskReq,proto3" json:"DiskReq,omitempty"`
-	RuntimePreSet int64   `protobuf:"varint,5,opt,name=RuntimePreSet,proto3" json:"RuntimePreSet,omitempty"`
-	TaskName      string  `protobuf:"bytes,6,opt,name=TaskName,proto3" json:"TaskName,omitempty"`
-	LogicName     string  `protobuf:"bytes,7,opt,name=LogicName,proto3" json:"LogicName,omitempty"`
+	Username      string
+	CPUReq        float64
+	MemoryReq     float64
+	DiskReq       float64
+	RuntimePreSet int64
+	TaskName      string
+	LogicName     string
 	DataSize      float64  //Unit: MB
-	DeadlineSlack int32   `protobuf:"varint,9,opt,name=DeadlineSlack,proto3" json:"DeadlineSlack,omitempty"`
-	TaskLocation  string  `protobuf:"bytes,10,opt,name=TaskLocation,proto3" json:"TaskLocation,omitempty"`
+	DeadlineSlack int32    // 0 for no deadline
+	TaskLocation  string
 
 	//timestamp is recorded in microsec
 	//attribute created in the master
-	TaskId           int32  `protobuf:"varint,11,opt,name=TaskId,proto3" json:"TaskId,omitempty"`
-	SubmitTST        int64  `protobuf:"varint,12,opt,name=SubmitTST,proto3" json:"SubmitTST,omitempty"`
-	PredictExecTime  int64  `protobuf:"varint,13,opt,name=PredictExecTime,proto3" json:"PredictExecTime,omitempty"`
-	PredictTransTime int64  `protobuf:"varint,14,opt,name=PredictTransTime,proto3" json:"PredictTransTime,omitempty"`
-	PredictWaitTime  int64  `protobuf:"varint,15,opt,name=PredictWaitTime,proto3" json:"PredictWaitTime,omitempty"`
-	PredictExtraTime int64  `protobuf:"varint,16,opt,name=PredictExtraTime,proto3" json:"PredictExtraTime,omitempty"`
-	AssignTST        int64  `protobuf:"varint,19,opt,name=AssignTST,proto3" json:"AssignTST,omitempty"`
+	TaskId           int32
+	SubmitTST        int64
+	PredictExecTime  int64
+	PredictTransTime int64
+	PredictWaitTime  int64
+	PredictExtraTime int64
+	AssignTST        int64
 	NodeId common.NodeIdentity	//分配的节点
 
 	//attribute created in the node
-	RecvTST              int64    `protobuf:"varint,20,opt,name=RecvTST,proto3" json:"RecvTST,omitempty"`
-	ExecTST              int64    `protobuf:"varint,21,opt,name=ExecTST,proto3" json:"ExecTST,omitempty"`
-	FinishTST            int64    `protobuf:"varint,22,opt,name=FinishTST,proto3" json:"FinishTST,omitempty"`
+	RecvTST              int64
+	ExecTST              int64
+	FinishTST            int64
 
 	RunCnt               int32     //update when assignment begins
 	//TransmitCnt          int32     //maximum 3 times per Run
 	//attribute changed in all steps
-	Status               int32    `protobuf:"varint,19,opt,name=StatusCode,proto3" json:"StatusCode,omitempty"`
-	Err                  error   `protobuf:"bytes,20,opt,name=Err,proto3" json:"Err,omitempty"`
+	Status               int32
+	Err                  error
 
 	//任务执行后的回调函数
 	callback interface{}
@@ -81,7 +81,7 @@ type TaskEntity struct {
 
 	//其他属性
 	//sync.RWMutex
-	IsAborted bool  //表示模拟传输过程被中断
+	IsTransAborted bool  //表示模拟传输过程被中断
 	NodeCapa float64
 }
 

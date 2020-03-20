@@ -5,6 +5,7 @@ import (
 	//"google.golang.org/grpc"
 	//"io"
 	"log"
+	"golang.org/x/net/context"
 	"time"
 
 	//"os"
@@ -13,7 +14,6 @@ import (
 	"taskAssignmentForEdge/taskmgt"
 	//"time"
 	pb "taskAssignmentForEdge/proto"
-	"golang.org/x/net/context"
 )
 
 //分配
@@ -31,12 +31,12 @@ func (ms *Master) ReturnOneTaskToClient(task *taskmgt.TaskEntity) {
 	}
 	r, err := c.ReturnSubmittedTasks(context.Background(), res)
 	if err != nil {
-		log.Printf("Cannot send back result of task %d to client", task.TaskId)
+		log.Printf("Cannot send back result of task(%d, Runcnt:%d) to client", task.TaskId, task.RunCnt)
 	} else {
 		if r.Reply {
-			log.Printf("Sucess to return result of task %d to client", task.TaskId)
+			log.Printf("Sucess to return result of task(%d, Runcnt:%d) to client", task.TaskId, task.RunCnt)
 		} else {
-			log.Printf("Fail to return result of task %d to client", task.TaskId)
+			log.Printf("Fail to return result of task(%d, Runcnt:%d) to client", task.TaskId, task.RunCnt)
 		}
 	}
 }
@@ -64,12 +64,22 @@ func (ms *Master) ReturnTasksToClient(taskgp []*taskmgt.TaskEntity) {
 
 // if task status is not expected
 func (ms *Master) ReturnOrRescheduleTask(task *taskmgt.TaskEntity) {
-	if task.RunCnt >= taskmgt.TaskMaxRunCnt {
+	/*if task.RunCnt >= taskmgt.TaskMaxRunCnt {
 		task.FinishTST = time.Now().UnixNano()/1e3
 		ms.ReturnOneTaskToClient(task)
 		log.Printf("Return result of failed task(Id:%d) due to reaching maxinum run times(%d)", task.TaskId, task.RunCnt)
 	} else {
 		ms.Tq.EnqueueTask(task)
 		//log.Printf("Enqueue and reschedule task(Id:%d) with used run times(%d)", task.TaskId, task.RunCnt)
+	}*/
+	curRunTime := time.Now().UnixNano()/1e3 - task.AssignTST
+	deadlineRunTime := int64(float64(task.RuntimePreSet)*(1 + float64(task.DeadlineSlack/100)))
+	if (task.DeadlineSlack > 0) && (curRunTime > deadlineRunTime ) { //miss the deadline
+		task.FinishTST = time.Now().UnixNano()/1e3
+		ms.ReturnOneTaskToClient(task)
+		log.Printf("Return result of failed task(Id:%d) due to missing deadline", task.TaskId)
+	} else {
+		ms.Tq.EnqueueTask(task)
+		log.Printf("Reschedule task(Id:%d)", task.TaskId)
 	}
 }

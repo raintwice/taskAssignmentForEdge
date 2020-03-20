@@ -165,13 +165,13 @@ func (no *Node) SendTaskResults(taskResGp []*taskmgt.TaskEntity) {
 		log.Printf("Could not send task result to master(%s:%d): %v", no.Maddr, no.Mport, err)
 	} else {
 		if(r.Reply) {
-			var idstr string = ""
-			for _, task := range taskResGp {
+			//var idstr string = ""
+			/*for _, task := range taskResGp {
 				idstr = idstr + strconv.Itoa(int(task.TaskId))+ ";"
-			}
-			log.Printf("Successed to return tasks(%s) result in Node(%s:%d)", idstr, no.Saddr, no.Sport)
+			}*/
+			log.Printf("Successed to return tasks(%d, runcnt:%d) result in Node(%s:%d)", taskResGp[0].TaskId, taskResGp[0].RunCnt, no.Saddr, no.Sport)
 		} else {
-			log.Printf("Failed to retun task result in Node(%s:%d)", no.Saddr, no.Sport)
+			log.Printf("Failed to retun task(%d, runcnt:%d) result in Node(%s:%d)", taskResGp[0].TaskId, taskResGp[0].RunCnt, no.Saddr, no.Sport)
 		}
 	}
 }
