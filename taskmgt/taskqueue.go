@@ -3,6 +3,7 @@ package taskmgt
 import (
 	"container/list"
 	"log"
+	"sort"
 	"sync"
 )
 
@@ -169,3 +170,59 @@ func (tq *TaskQueue) MergeTasks(mtq *TaskQueue) {
   }
   fmt.Println("---taskloading end---")
 }*/
+
+
+type TaskSimpleQueue struct {
+	tq []*TaskEntity
+	rwlock sync.RWMutex
+}
+
+func NewTaskSimpleQueue()  *TaskSimpleQueue {
+	return &TaskSimpleQueue{
+		tq: make([]*TaskEntity, 0),
+	}
+}
+
+func (tsq *TaskSimpleQueue) EnqueueTask(task *TaskEntity) {
+	tsq.rwlock.Lock()
+	tsq.tq = append(tsq.tq, task)
+	tsq.rwlock.Unlock()
+}
+
+type SchedulerFunc func(tsq *TaskSimpleQueue)
+
+func DeadlineFirstScheduler(tsq *TaskSimpleQueue) {
+	tsq.rwlock.Lock()
+	sort.Slice(tsq.tq, func(i,j int) bool {
+		return tsq.tq[i].Deadline < tsq.tq[j].Deadline
+	})
+	tsq.rwlock.Unlock()
+}
+
+func (tsq *TaskSimpleQueue) PopFirstTask(f SchedulerFunc) (task *TaskEntity) {
+	if f != nil {
+		f(tsq)
+	}
+	if len(tsq.tq) == 0 {
+		return nil
+	}
+	tsq.rwlock.Lock()
+	task = tsq.tq[0]
+	tsq.tq = tsq.tq[1:]
+	tsq.rwlock.Unlock()
+	log.Printf("schedule task(%d) with earliest deadline(%d)", task.TaskId, task.Deadline)
+	return task
+}
+
+func (tsq *TaskSimpleQueue) Clear() {
+	if len(tsq.tq) > 0 {
+		tsq.tq = tsq.tq[0:0]
+	}
+}
+
+func (tsq *TaskSimpleQueue) GetTaskNum() (taskNum int){
+	tsq.rwlock.RLock()
+	taskNum = len(tsq.tq)
+	tsq.rwlock.RUnlock()
+	return taskNum
+}

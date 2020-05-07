@@ -105,9 +105,8 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 			ms.Tq.EnqueueTask(newTask)
 			log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", node.NodeId.IP, node.NodeId.Port)
 		}*/
-		curRunTime := time.Now().UnixNano()/1e3 - task.AssignTST
-		deadlineRunTime := int64(float64(task.RuntimePreSet)*(1 + float64(task.DeadlineSlack/100)))
-		if (task.DeadlineSlack > 0) && (curRunTime > deadlineRunTime ) { //miss the deadline
+		curTST := time.Now().UnixNano()/1e3
+		if (task.DeadlineSlack >= 0) && (curTST > task.Deadline) { //miss the deadline
 			task.FinishTST = time.Now().UnixNano()/1e3
 			ms.ReturnOneTaskToClient(task)
 			log.Printf("Return result of failed task(Id:%d) due to missing deadline", task.TaskId)

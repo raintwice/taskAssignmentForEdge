@@ -72,9 +72,10 @@ func (ms *Master) ReturnOrRescheduleTask(task *taskmgt.TaskEntity) {
 		ms.Tq.EnqueueTask(task)
 		//log.Printf("Enqueue and reschedule task(Id:%d) with used run times(%d)", task.TaskId, task.RunCnt)
 	}*/
-	curRunTime := time.Now().UnixNano()/1e3 - task.AssignTST
-	deadlineRunTime := int64(float64(task.RuntimePreSet)*(1 + float64(task.DeadlineSlack/100)))
-	if (task.DeadlineSlack > 0) && (curRunTime > deadlineRunTime ) { //miss the deadline
+	//curRunTime := time.Now().UnixNano()/1e3 - task.AssignTST
+	//deadlineRunTime := int64(float64(task.RuntimePreSet)*(1 + float64(task.DeadlineSlack/100)))
+	curTST := time.Now().UnixNano()/1e3
+	if (task.DeadlineSlack >= 0) && (curTST > task.Deadline ) { //miss the deadline
 		task.FinishTST = time.Now().UnixNano()/1e3
 		ms.ReturnOneTaskToClient(task)
 		log.Printf("Return result of failed task(Id:%d) due to missing deadline", task.TaskId)

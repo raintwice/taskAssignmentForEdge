@@ -3,9 +3,10 @@ package taskmgt
 import "sync"
 
 type Pool struct {
-	EntryChannel chan *TaskEntity
+	tq *TaskSimpleQueue
+	EntryChannel chan *TaskSimpleQueue
 	worker_num int
-	JobsChannel chan *TaskEntity
+	JobsChannel chan *TaskSimpleQueue
 
 	JobsCntRwLock sync.RWMutex
 	JobsCnt int
@@ -13,17 +14,21 @@ type Pool struct {
 
 func NewPool(cap int) *Pool {
 	p := Pool {
-		EntryChannel: make(chan *TaskEntity),
+		tq: NewTaskSimpleQueue(),
+		EntryChannel: make(chan *TaskSimpleQueue),
 		worker_num: cap,
-		JobsChannel: make(chan *TaskEntity),
+		JobsChannel: make(chan *TaskSimpleQueue),
 	}
 	return &p
 }
 
 func (p *Pool) worker(workId int) {
-	for task := range p.JobsChannel {
+	for taskqueue := range p.JobsChannel {
 		//task.Execute()
-		task.RunSimulation()
+		task := taskqueue.PopFirstTask(DeadlineFirstScheduler)
+		if task != nil {
+			task.RunSimulation()
+		}
 		//log.Printf("Task %d completed in worker ID %d", task.TaskId, workId)
 		p.JobsCntRwLock.Lock()
 		p.JobsCnt--
@@ -56,8 +61,8 @@ func (p *Pool) SafeRun() {
 
 		}
 	}()
-	for task := range p.EntryChannel {
-		p.JobsChannel <- task
+	for tq := range p.EntryChannel {
+		p.JobsChannel <- tq
 	}
 }
 
@@ -66,16 +71,18 @@ func (p *Pool) Submit(t *TaskEntity) {
 	p.EntryChannel <- t
 }*/
 
-func (p *Pool) SafeSubmit(t *TaskEntity) (closed bool) {
+func (p *Pool) SafeSubmit(task *TaskEntity) (closed bool) {
 	defer func() {
 		if recover() != nil {
 			closed = true
 		}
 	}()
+
+	p.tq.EnqueueTask(task)
 	p.JobsCntRwLock.Lock()
 	p.JobsCnt ++
 	p.JobsCntRwLock.Unlock()
-	p.EntryChannel <- t
+	p.EntryChannel <- p.tq
 	return  false
 }
 
@@ -87,6 +94,7 @@ func (p *Pool) SafeStop() (justClosed bool) {
 	}()
 	close(p.EntryChannel)
 	close(p.JobsChannel)
+	p.tq.Clear()
 	return true
 }
 

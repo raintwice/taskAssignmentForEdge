@@ -36,7 +36,7 @@ const (
 	TaskType_Real
 )
 
-const (TaskAttributeNum = 25
+const (TaskAttributeNum = 26
        TaskMaxRunCnt = 3
 )
 
@@ -51,6 +51,7 @@ type TaskEntity struct {
 	LogicName     string
 	DataSize      float64  //Unit: MB
 	DeadlineSlack int32    // 0 for no deadline
+	Deadline      int64
 	TaskLocation  string
 
 	//timestamp is recorded in microsec
@@ -106,6 +107,7 @@ func CloneTask(task *TaskEntity) *TaskEntity {
 	newTask.LogicName = task.LogicName
 	newTask.DataSize = task.DataSize
 	newTask.DeadlineSlack = task.DeadlineSlack
+	newTask.Deadline = task.Deadline
 	newTask.TaskLocation = task.TaskLocation
 	newTask.TaskId = task.TaskId
 	newTask.SubmitTST = task.SubmitTST
@@ -216,19 +218,20 @@ func TranslateProtoTaskToRecord(info *pb.TaskInfo, record []string) {
 	record[9] = info.TaskLocation
 	record[10] = strconv.Itoa(int(info.TaskId))
 	record[11] = strconv.FormatInt(info.SubmitTST, 10)
-	record[12] = strconv.FormatInt(info.PredictExecTime,10)
-	record[13] = strconv.FormatInt(info.PredictTransTime,10)
-	record[14] = strconv.FormatInt(info.PredictWaitTime,10)
-	record[15] = strconv.FormatInt(info.PredictExtraTime, 10)
-	record[16] = info.AssignNodeIP
-	record[17] = strconv.Itoa(int(info.AssignNodePort))
-	record[18] = strconv.FormatInt(info.AssignTST,10)
-	record[19] = strconv.FormatInt(info.RecvTST, 10)
-	record[20] = strconv.FormatInt(info.ExecTST, 10)
-	record[21] = strconv.FormatInt(info.FinishTST,10)
-	record[22] = strconv.Itoa(int(info.RunCnt))
-	record[23] = strconv.Itoa(int(info.StatusCode))
-	record[24] = info.Err
+	record[12] = strconv.FormatInt(info.Deadline, 10)
+	record[13] = strconv.FormatInt(info.PredictExecTime,10)
+	record[14] = strconv.FormatInt(info.PredictTransTime,10)
+	record[15] = strconv.FormatInt(info.PredictWaitTime,10)
+	record[16] = strconv.FormatInt(info.PredictExtraTime, 10)
+	record[17] = info.AssignNodeIP
+	record[18] = strconv.Itoa(int(info.AssignNodePort))
+	record[19] = strconv.FormatInt(info.AssignTST,10)
+	record[20] = strconv.FormatInt(info.RecvTST, 10)
+	record[21] = strconv.FormatInt(info.ExecTST, 10)
+	record[22] = strconv.FormatInt(info.FinishTST,10)
+	record[23] = strconv.Itoa(int(info.RunCnt))
+	record[24] = strconv.Itoa(int(info.StatusCode))
+	record[25] = info.Err
 }
 
 //in master; client->master
@@ -244,7 +247,12 @@ func TranslateSubmittingTaskFromP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.DataSize = info.DataSize
 	task.DeadlineSlack = info.DeadlineSlack
 	task.TaskLocation = info.TaskLocation
-
+	if task.DeadlineSlack >= 0 {
+		task.Deadline = time.Now().UnixNano()/1e3 + int64(float64(task.RuntimePreSet)*(1+float64(task.DeadlineSlack/100)))
+	} else { // -1
+		//no deadline
+		task.Deadline = int64(^uint64(0) >> 1)
+	}
 	return
 }
 
@@ -263,6 +271,7 @@ func TranslateAssigningTaskE2P(task *TaskEntity, info *pb.TaskInfo) {
 
 	info.TaskId = task.TaskId
 	info.SubmitTST = task.SubmitTST
+	info.Deadline = task.Deadline
 	info.PredictExecTime = task.PredictExecTime
 	info.PredictTransTime = task.PredictTransTime
 	info.PredictWaitTime = task.PredictWaitTime
@@ -295,6 +304,7 @@ func TranslateTaskResE2P(task *TaskEntity, info *pb.TaskInfo) {
 	//attribute created in the master
 	info.TaskId = task.TaskId
 	info.SubmitTST = task.SubmitTST
+	info.Deadline = task.Deadline
 	info.PredictExecTime = task.PredictExecTime
 	info.PredictTransTime = task.PredictTransTime
 	info.PredictWaitTime = task.PredictWaitTime
@@ -331,6 +341,7 @@ func TranslateAssigningTaskP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.TaskLocation = info.TaskLocation
 	task.TaskId = info.TaskId
 	task.SubmitTST = info.SubmitTST
+	task.Deadline = info.Deadline
 	task.PredictExecTime = info.PredictExecTime
 	task.PredictTransTime = info.PredictTransTime
 	task.PredictWaitTime = info.PredictWaitTime
@@ -361,6 +372,7 @@ func TranslateAssigningTaskResP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.TaskLocation = info.TaskLocation
 	task.TaskId = info.TaskId
 	task.SubmitTST = info.SubmitTST
+	task.Deadline = info.Deadline
 	task.PredictExecTime = info.PredictExecTime
 	task.PredictTransTime = info.PredictTransTime
 	task.PredictWaitTime = info.PredictWaitTime
