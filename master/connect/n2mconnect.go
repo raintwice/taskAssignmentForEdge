@@ -223,6 +223,7 @@ func (ms *Master) SendTaskResults(ctx context.Context, in *pb.TaskResultReq) (*p
 			ms.ReturnOrRescheduleTask(task)
 		} else {
 			//send back to client
+			task.FinishTST = time.Now().UnixNano()/1e3
 			ms.ReturnOneTaskToClient(task)
 			//update task info to predictor
 			ms.UpdateRuntimePredictors(task, node)

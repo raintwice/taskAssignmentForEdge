@@ -114,7 +114,7 @@ func (ms *Master) TransmitOneTask(task *taskmgt.TaskEntity, node *nodemgt.NodeEn
 	if err != nil {
 		log.Printf("Transmit task %d failed, %v", task.TaskId, err.Error())
 		task.Status = taskmgt.TaskStatusCode_TransmitFailed
-		if task.IsAborted == true {
+		if task.IsTransAborted == true {
 			log.Printf("Info: failed to transmit the discarded task %d due to node[%s:%d] has been exited\n", task.TaskId, task.NodeId.IP, task.NodeId.Port)
 		} else {
 			ms.ReturnOrRescheduleTask(task)

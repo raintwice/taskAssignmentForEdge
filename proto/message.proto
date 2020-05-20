@@ -62,23 +62,24 @@ message TaskInfo
 //attribute created in the master
     int32  taskId   = 11; //created by master
     int64  submitTST = 12; //timestamp when accepted by master
-    int64  predictExecTime = 13;
-    int64  predictTransTime = 14;
-    int64  predictWaitTime  = 15;
-    int64  predictExtraTime = 16;
-    string assignNodeIP = 17;
-    int32  assignNodePort = 18;
-    int64  assignTST =  19; //timestamp when begin to assign
+    int64  deadline = 13;
+    int64  predictExecTime = 14;
+    int64  predictTransTime = 15;
+    int64  predictWaitTime  = 16;
+    int64  predictExtraTime = 17;
+    string assignNodeIP = 18;
+    int32  assignNodePort = 19;
+    int64  assignTST =  20; //timestamp when begin to assign
 
 //attribute created in the node
-    int64  recvTST   = 20;  //timestamp when receivied by node
-    int64  execTST   =  21; //timestamp when begin to execute
-    int64  finishTST =  22; //timestamp when begin to execute
-    int32  runCnt    =  23; //update when accepted by node
+    int64  recvTST   = 21;  //timestamp when receivied by node
+    int64  execTST   =  22; //timestamp when begin to execute
+    int64  finishTST =  23; //timestamp when begin to execute
+    int32  runCnt    =  24; //update when accepted by node
 
 //attribute changed in all steps
-    int32 statusCode  = 24;
-    string err        = 25;
+    int32 statusCode  = 25;
+    string err        = 26;
 }
 
 //node send task result
