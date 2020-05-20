@@ -93,6 +93,7 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 		task.NodeId.IP = ""
 		task.NodeId.Port = 0
 		task.Status = taskmgt.TaskStatusCode_TransmitFailed
+		/*
 		if task.RunCnt >= taskmgt.TaskMaxRunCnt {
 			task.FinishTST = time.Now().UnixNano()/1e3
 			ms.ReturnOneTaskToClient(task)
@@ -103,8 +104,21 @@ func (ms *Master) NodeExitEventHandler(node *nodemgt.NodeEntity) {
 			newTask.Status = taskmgt.TaskStatusCode_TransmitFailed
 			ms.Tq.EnqueueTask(newTask)
 			log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", task.TaskId, node.NodeId.IP, node.NodeId.Port)
+		}*/
+		curTST := time.Now().UnixNano()/1e3
+		if (task.DeadlineSlack >= 0) && (curTST > task.Deadline) { //miss the deadline
+			task.FinishTST = time.Now().UnixNano()/1e3
+			ms.ReturnOneTaskToClient(task)
+			log.Printf("Return result of failed task(Id:%d) due to missing deadline", task.TaskId)
+		} else {
+			//clone this task, abandon the origin one
+			newTask := taskmgt.CloneTask(task)
+			newTask.Status = taskmgt.TaskStatusCode_TransmitFailed
+			ms.Tq.EnqueueTask(newTask)
+			//log.Printf("Discard task(Id:%d) due to exiting of Node(%s:%d), and clone a new task into global", node.NodeId.IP, node.NodeId.Port)
+			log.Printf("Discard and reschedule task(Id:%d, curRunCnt:%d) due to exiting of Node(%s:%d)", task.TaskId, task.RunCnt, node.NodeId.IP, node.NodeId.Port)
 		}
-		task.IsAborted = true //abandon this origin task, , the origin one will drop itself
+		task.IsTransAborted = true //abandon this origin task, , the origin one will drop itself
 	}
 	assignedTasks := node.TqAssign.DequeueAllTasks()
 	for _, task := range assignedTasks {  //move to the schedule queue

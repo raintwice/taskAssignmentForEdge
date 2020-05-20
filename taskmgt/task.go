@@ -37,44 +37,45 @@ const (
 	TaskType_Real
 )
 
-const (TaskAttributeNum = 25
+const (TaskAttributeNum = 26
        TaskMaxRunCnt = 3
 )
 
 type TaskEntity struct {
 	//attribute needed to input
-	Username      string  `protobuf:"bytes,1,opt,name=Username,proto3" json:"Username,omitempty"`
-	CPUReq        float64 `protobuf:"fixed64,2,opt,name=CPUReq,proto3" json:"CPUReq,omitempty"`
-	MemoryReq     float64 `protobuf:"fixed64,3,opt,name=MemoryReq,proto3" json:"MemoryReq,omitempty"`
-	DiskReq       float64 `protobuf:"fixed64,4,opt,name=DiskReq,proto3" json:"DiskReq,omitempty"`
-	RuntimePreSet int64   `protobuf:"varint,5,opt,name=RuntimePreSet,proto3" json:"RuntimePreSet,omitempty"`
-	TaskName      string  `protobuf:"bytes,6,opt,name=TaskName,proto3" json:"TaskName,omitempty"`
-	LogicName     string  `protobuf:"bytes,7,opt,name=LogicName,proto3" json:"LogicName,omitempty"`
+	Username      string
+	CPUReq        float64
+	MemoryReq     float64
+	DiskReq       float64
+	RuntimePreSet int64
+	TaskName      string
+	LogicName     string
 	DataSize      float64  //Unit: MB
-	DeadlineSlack int32   `protobuf:"varint,9,opt,name=DeadlineSlack,proto3" json:"DeadlineSlack,omitempty"`
-	TaskLocation  string  `protobuf:"bytes,10,opt,name=TaskLocation,proto3" json:"TaskLocation,omitempty"`
+	DeadlineSlack int32    // 0 for no deadline
+	Deadline      int64
+	TaskLocation  string
 
 	//timestamp is recorded in microsec
 	//attribute created in the master
-	TaskId           int32  `protobuf:"varint,11,opt,name=TaskId,proto3" json:"TaskId,omitempty"`
-	SubmitTST        int64  `protobuf:"varint,12,opt,name=SubmitTST,proto3" json:"SubmitTST,omitempty"`
-	PredictExecTime  int64  `protobuf:"varint,13,opt,name=PredictExecTime,proto3" json:"PredictExecTime,omitempty"`
-	PredictTransTime int64  `protobuf:"varint,14,opt,name=PredictTransTime,proto3" json:"PredictTransTime,omitempty"`
-	PredictWaitTime  int64  `protobuf:"varint,15,opt,name=PredictWaitTime,proto3" json:"PredictWaitTime,omitempty"`
-	PredictExtraTime int64  `protobuf:"varint,16,opt,name=PredictExtraTime,proto3" json:"PredictExtraTime,omitempty"`
-	AssignTST        int64  `protobuf:"varint,19,opt,name=AssignTST,proto3" json:"AssignTST,omitempty"`
+	TaskId           int32
+	SubmitTST        int64
+	PredictExecTime  int64
+	PredictTransTime int64
+	PredictWaitTime  int64
+	PredictExtraTime int64
+	AssignTST        int64
 	NodeId common.NodeIdentity	//分配的节点
 
 	//attribute created in the node
-	RecvTST              int64    `protobuf:"varint,20,opt,name=RecvTST,proto3" json:"RecvTST,omitempty"`
-	ExecTST              int64    `protobuf:"varint,21,opt,name=ExecTST,proto3" json:"ExecTST,omitempty"`
-	FinishTST            int64    `protobuf:"varint,22,opt,name=FinishTST,proto3" json:"FinishTST,omitempty"`
+	RecvTST              int64
+	ExecTST              int64
+	FinishTST            int64
 
 	RunCnt               int32     //update when assignment begins
 	//TransmitCnt          int32     //maximum 3 times per Run
 	//attribute changed in all steps
-	Status               int32    `protobuf:"varint,19,opt,name=StatusCode,proto3" json:"StatusCode,omitempty"`
-	Err                  error   `protobuf:"bytes,20,opt,name=Err,proto3" json:"Err,omitempty"`
+	Status               int32
+	Err                  error
 
 	//任务执行后的回调函数
 	callback interface{}
@@ -82,7 +83,7 @@ type TaskEntity struct {
 
 	//其他属性
 	//sync.RWMutex
-	IsAborted bool  //表示模拟传输过程被中断
+	IsTransAborted bool  //表示模拟传输过程被中断
 	NodeCapa float64
 }
 
@@ -107,6 +108,7 @@ func CloneTask(task *TaskEntity) *TaskEntity {
 	newTask.LogicName = task.LogicName
 	newTask.DataSize = task.DataSize
 	newTask.DeadlineSlack = task.DeadlineSlack
+	newTask.Deadline = task.Deadline
 	newTask.TaskLocation = task.TaskLocation
 	newTask.TaskId = task.TaskId
 	newTask.SubmitTST = task.SubmitTST
@@ -237,19 +239,20 @@ func TranslateProtoTaskToRecord(info *pb.TaskInfo, record []string) {
 	record[9] = info.TaskLocation
 	record[10] = strconv.Itoa(int(info.TaskId))
 	record[11] = strconv.FormatInt(info.SubmitTST, 10)
-	record[12] = strconv.FormatInt(info.PredictExecTime,10)
-	record[13] = strconv.FormatInt(info.PredictTransTime,10)
-	record[14] = strconv.FormatInt(info.PredictWaitTime,10)
-	record[15] = strconv.FormatInt(info.PredictExtraTime, 10)
-	record[16] = info.AssignNodeIP
-	record[17] = strconv.Itoa(int(info.AssignNodePort))
-	record[18] = strconv.FormatInt(info.AssignTST,10)
-	record[19] = strconv.FormatInt(info.RecvTST, 10)
-	record[20] = strconv.FormatInt(info.ExecTST, 10)
-	record[21] = strconv.FormatInt(info.FinishTST,10)
-	record[22] = strconv.Itoa(int(info.RunCnt))
-	record[23] = strconv.Itoa(int(info.StatusCode))
-	record[24] = info.Err
+	record[12] = strconv.FormatInt(info.Deadline, 10)
+	record[13] = strconv.FormatInt(info.PredictExecTime,10)
+	record[14] = strconv.FormatInt(info.PredictTransTime,10)
+	record[15] = strconv.FormatInt(info.PredictWaitTime,10)
+	record[16] = strconv.FormatInt(info.PredictExtraTime, 10)
+	record[17] = info.AssignNodeIP
+	record[18] = strconv.Itoa(int(info.AssignNodePort))
+	record[19] = strconv.FormatInt(info.AssignTST,10)
+	record[20] = strconv.FormatInt(info.RecvTST, 10)
+	record[21] = strconv.FormatInt(info.ExecTST, 10)
+	record[22] = strconv.FormatInt(info.FinishTST,10)
+	record[23] = strconv.Itoa(int(info.RunCnt))
+	record[24] = strconv.Itoa(int(info.StatusCode))
+	record[25] = info.Err
 }
 
 //in master; client->master
@@ -265,7 +268,12 @@ func TranslateSubmittingTaskFromP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.DataSize = info.DataSize
 	task.DeadlineSlack = info.DeadlineSlack
 	task.TaskLocation = info.TaskLocation
-
+	if task.DeadlineSlack >= 0 {
+		task.Deadline = time.Now().UnixNano()/1e3 + int64(float64(task.RuntimePreSet)*(1+float64(task.DeadlineSlack/100)))
+	} else { // -1
+		//no deadline
+		task.Deadline = int64(^uint64(0) >> 1)
+	}
 	return
 }
 
@@ -284,6 +292,7 @@ func TranslateAssigningTaskE2P(task *TaskEntity, info *pb.TaskInfo) {
 
 	info.TaskId = task.TaskId
 	info.SubmitTST = task.SubmitTST
+	info.Deadline = task.Deadline
 	info.PredictExecTime = task.PredictExecTime
 	info.PredictTransTime = task.PredictTransTime
 	info.PredictWaitTime = task.PredictWaitTime
@@ -316,6 +325,7 @@ func TranslateTaskResE2P(task *TaskEntity, info *pb.TaskInfo) {
 	//attribute created in the master
 	info.TaskId = task.TaskId
 	info.SubmitTST = task.SubmitTST
+	info.Deadline = task.Deadline
 	info.PredictExecTime = task.PredictExecTime
 	info.PredictTransTime = task.PredictTransTime
 	info.PredictWaitTime = task.PredictWaitTime
@@ -352,6 +362,7 @@ func TranslateAssigningTaskP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.TaskLocation = info.TaskLocation
 	task.TaskId = info.TaskId
 	task.SubmitTST = info.SubmitTST
+	task.Deadline = info.Deadline
 	task.PredictExecTime = info.PredictExecTime
 	task.PredictTransTime = info.PredictTransTime
 	task.PredictWaitTime = info.PredictWaitTime
@@ -382,6 +393,7 @@ func TranslateAssigningTaskResP2E(info *pb.TaskInfo, task *TaskEntity) {
 	task.TaskLocation = info.TaskLocation
 	task.TaskId = info.TaskId
 	task.SubmitTST = info.SubmitTST
+	task.Deadline = info.Deadline
 	task.PredictExecTime = info.PredictExecTime
 	task.PredictTransTime = info.PredictTransTime
 	task.PredictWaitTime = info.PredictWaitTime
