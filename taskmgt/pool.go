@@ -5,6 +5,11 @@ import (
 	"taskAssignmentForEdge/common"
 )
 
+const (
+	Scheduler_Default = iota
+	Scheduler_EDF
+)
+
 type Pool struct {
 	tq *TaskSimpleQueue
 	EntryChannel chan *TaskSimpleQueue
@@ -13,13 +18,15 @@ type Pool struct {
 
 	JobsCntRwLock sync.RWMutex
 	JobsCnt int
+	SchedulerID int
 }
 
-func NewPool(cap int) *Pool {
+func NewPool(cap int, schedulerID int) *Pool {
 	p := Pool {
 		tq: NewTaskSimpleQueue(),
 		EntryChannel: make(chan *TaskSimpleQueue),
 		worker_num: cap,
+		SchedulerID:schedulerID,
 		JobsChannel: make(chan *TaskSimpleQueue),
 	}
 	return &p
@@ -28,7 +35,7 @@ func NewPool(cap int) *Pool {
 func (p *Pool) worker(workId int) {
 	for taskqueue := range p.JobsChannel {
 		//task.Execute()
-		task := taskqueue.PopFirstTask(DeadlineFirstScheduler)
+		task := taskqueue.PopFirstTask(FindScheduler(p.SchedulerID))
 		if task != nil {
 			if common.EvalType == common.SIMULATION {
 				task.RunSimulation()

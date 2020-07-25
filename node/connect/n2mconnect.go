@@ -57,7 +57,7 @@ func (no *Node) Join() {
         log.Printf("Node(%s:%d) Successed to join", no.Saddr, no.Sport)
         no.isOnline = true
         //boot up task pool
-        no.StartPool(no.PoolCap)
+        no.StartPool(no.PoolCap, no.SchedulerID)
     } else {
         log.Printf("Node(%s:%d) Failed to join", no.Saddr, no.Sport)
     }
