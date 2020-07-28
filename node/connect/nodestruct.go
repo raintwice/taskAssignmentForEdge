@@ -34,6 +34,7 @@ type Node struct {
 	//rwLock sync.RWMutex    //pendingTasks的锁
 
 	PoolCap int //worker数量
+	SchedulerID int //调度器ID
 	AvgExecTime int64  //平均任务执行时间
 	FinishTaskCnt int
 
@@ -76,8 +77,14 @@ func  (no *Node) StartPool(cap int, wg *sync.WaitGroup) {
 	wg.Done()
 }*/
 
+/*
 func  (no *Node) StartPool(cap int) {
 	no.pool = taskmgt.NewPool(cap)
+	go no.pool.SafeRun()
+}*/
+func  (no *Node) StartPool(cap int, schedulerID int) {
+	no.pool = taskmgt.NewPool(cap, schedulerID)
+	log.Printf("Start worker pool with %d workers, and Scheduler %d", cap, schedulerID)
 	go no.pool.SafeRun()
 }
 

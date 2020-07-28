@@ -191,6 +191,22 @@ func (tsq *TaskSimpleQueue) EnqueueTask(task *TaskEntity) {
 
 type SchedulerFunc func(tsq *TaskSimpleQueue)
 
+func FindScheduler(schedulerID int)  (f SchedulerFunc) {
+	switch schedulerID {
+	case Scheduler_Default:
+		f = DefaultScheduler
+	case Scheduler_EDF:
+		f = DeadlineFirstScheduler
+	default:
+		log.Fatalf("Wrong Scheduler ID!")
+	}
+	return  f
+}
+
+func DefaultScheduler(tsq *TaskSimpleQueue) {
+	//First come first serve; do nothing
+}
+
 func DeadlineFirstScheduler(tsq *TaskSimpleQueue) {
 	tsq.rwlock.Lock()
 	sort.Slice(tsq.tq, func(i,j int) bool {

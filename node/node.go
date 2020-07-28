@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 	"taskAssignmentForEdge/common"
+	"taskAssignmentForEdge/taskmgt"
 	"time"
 
 	//"log"
@@ -34,6 +35,7 @@ var (
 	startTime int
 	nodeMode int
 	capa float64
+	schedulerId int
 )
 
 func init() {
@@ -51,6 +53,7 @@ func init() {
 	flag.Float64Var(&avl, "avl", 0.80, "set the availability of the edge node(in minutes) ")
 	flag.IntVar(&nodeMode, "nodeMode", common.Node_Mode_Repeat, "set the mode of Node(repeat or once)")
 	flag.Float64Var(&capa, "capa", common.Node_Capacity_Normal, "set the capacity of the edge node")
+	flag.IntVar(&schedulerId, "sid", taskmgt.Scheduler_Default, "set the scheduler")
 }
 
 func usage() {
@@ -87,6 +90,7 @@ func main(){
 	node.SetNodePara(bandWidth, machineType, startTime, poolCap, nodeMode)
 	node.SetNetworkPara(groupIndex, pscTimeAvg, pscTimeSig, avl)
 	node.Capacity = capa
+	node.SchedulerID = schedulerId
 	log.Printf("Capacity is %f\n", node.Capacity)
 	node.InitConnection()
 
